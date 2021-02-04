@@ -6,6 +6,7 @@ replace github.com/mattermost/mmetl v0.0.1 => ../mmetl
 
 require (
 	github.com/aws/aws-sdk-go v1.19.0
+	github.com/gorilla/mux v1.7.3
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattermost/mmetl v0.0.1

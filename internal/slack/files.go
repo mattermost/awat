@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-func FetchAttachments(inputArchive, destinationS3URI string) error {
+func FetchAttachedFiles(inputArchive, destinationS3URI string) error {
 	// Open the input archive.
 	r, err := zip.OpenReader(inputArchive)
 	if err != nil {
