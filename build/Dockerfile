@@ -22,8 +22,6 @@ LABEL name="Mattermost Cloud Automatic Workspace Archive Translator" \
 ENV USER_UID=10001 \
     USER_NAME=awat
 
-RUN apt-get update -yq && apt-get upgrade -yq && apt-get install s3fs -yq
-
 COPY --from=build /awat/build/_output/bin/awat /usr/local/bin/awat
 COPY --from=build /awat/build/bin/slack-advanced-exporter-linux-amd64 /usr/local/bin/slack-advanced-exporter
 

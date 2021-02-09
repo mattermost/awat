@@ -23,12 +23,12 @@ func init() {
 	serverCmd.PersistentFlags().String("listen", "localhost:8077", "Local interface and port to listen on")
 
 	rootCmd.MarkFlagRequired("bucket")
-
 	serverCmd.MarkFlagRequired("listen")
 	rootCmd.MarkFlagRequired("input")
 
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(translateCmd)
+	rootCmd.AddCommand(schemaCmd)
 }
 
 func main() {
