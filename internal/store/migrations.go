@@ -42,7 +42,7 @@ var migrations = []migration{
 						Error           TEXT,
 						StartAt         BigInt,
 						CompleteAt      BigInt,
-						LockedBy        TEXT,
+						LockedBy        TEXT
 				);
 		`)
 			return err

@@ -20,12 +20,20 @@ type SQLStore struct {
 }
 
 func New(dsn string, logger *logrus.Logger) (*SQLStore, error) {
-	_, err := url.Parse(dsn)
+	dbURL, err := url.Parse(dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse dsn as an url")
 	}
 
-	return nil, nil
+	db, err := sqlx.Connect("postgres", dbURL.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to postgres database")
+	}
+
+	return &SQLStore{
+		db,
+		logger,
+	}, nil
 }
 
 // queryer is an interface describing a resource that can query.
