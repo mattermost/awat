@@ -15,16 +15,6 @@ var schemaCmd = &cobra.Command{
 	Short: "Manipulate the schema used by the provisioning server.",
 }
 
-func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
-	database, _ := command.Flags().GetString("database")
-	sqlStore, err := store.New(database, logger)
-	if err != nil {
-		return nil, err
-	}
-
-	return sqlStore, nil
-}
-
 var schemaMigrateCmd = &cobra.Command{
 	Use:   "migrate",
 	Short: "Migrate the schema to the latest supported version.",
@@ -38,4 +28,9 @@ var schemaMigrateCmd = &cobra.Command{
 
 		return sqlStore.Migrate()
 	},
+}
+
+func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
+	database, _ := command.Flags().GetString("database")
+	return store.New(database, logger)
 }

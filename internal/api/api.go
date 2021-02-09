@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Register(rootRouter *mux.Router) {
+func Register(rootRouter *mux.Router, context *Context) {
 	rootRouter.HandleFunc("/translate", handleStartTranslation).Methods("POST")
 	rootRouter.HandleFunc("/translate", handleGetTranslationStatus).Methods("GET")
 }

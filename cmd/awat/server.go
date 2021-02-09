@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 
+	cloudModel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/mattermost/workspace-translator/internal/api"
 )
 
@@ -20,13 +21,23 @@ var serverCmd = &cobra.Command{
 	Short: "Run the AWAT server.",
 	RunE: func(command *cobra.Command, args []string) error {
 
-		router := mux.NewRouter()
-		api.Register(router)
-
 		listen, _ := command.Flags().GetString("listen")
 		if listen == "" {
 			return fmt.Errorf("the server command requires the --listen flag")
 		}
+
+		sqlStore, err := sqlStore(command)
+		if err != nil {
+			return err
+		}
+
+		router := mux.NewRouter()
+		api.Register(router, &api.Context{
+			Store:     sqlStore,
+			Logger:    logger,
+			RequestID: cloudModel.NewID(),
+		})
+
 		srv := &http.Server{
 			Addr:           listen,
 			Handler:        router,
