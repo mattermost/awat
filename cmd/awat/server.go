@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/spf13/cobra"
 
+	"github.com/mattermost/awat/internal/api"
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
-	"github.com/mattermost/workspace-translator/internal/api"
 )
 
 var serverCmd = &cobra.Command{

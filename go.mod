@@ -1,4 +1,4 @@
-module github.com/mattermost/workspace-translator
+module github.com/mattermost/awat
 
 go 1.15
 

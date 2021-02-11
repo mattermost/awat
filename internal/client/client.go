@@ -1,8 +1,8 @@
 package client
 
-import "github.com/mattermost/workspace-translator/internal/model"
+import "github.com/mattermost/awat/internal/model"
 
-func StartTranslation(translationRequest *model.StartTranslationRequest) error {
+func StartTranslation(translationRequest *model.TranslationRequest) error {
 	return nil
 }
 

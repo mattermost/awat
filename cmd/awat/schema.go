@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mattermost/workspace-translator/internal/store"
+	"github.com/mattermost/awat/internal/store"
 	"github.com/spf13/cobra"
 )
 
