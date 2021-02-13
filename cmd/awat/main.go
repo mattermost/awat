@@ -27,7 +27,7 @@ func init() {
 	rootCmd.MarkFlagRequired("input")
 
 	rootCmd.AddCommand(serverCmd)
-	rootCmd.AddCommand(translateCmd)
+	rootCmd.AddCommand(translationCmd)
 	rootCmd.AddCommand(schemaCmd)
 }
 

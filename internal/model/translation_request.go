@@ -33,3 +33,12 @@ func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, err
 	}
 	return &request, nil
 }
+
+func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error) {
+	var status TranslationStatus
+	err := json.NewDecoder(reader).Decode(&status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode translation start request")
+	}
+	return &status, nil
+}

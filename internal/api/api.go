@@ -16,7 +16,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 	}
 
 	rootRouter.Handle("/translate", addContext(handleStartTranslation)).Methods("POST")
-	rootRouter.Handle("/transaction/{id}", addContext(handleGetTranslationStatus)).Methods("GET")
+	rootRouter.Handle("/translation/{id}", addContext(handleGetTranslationStatus)).Methods("GET")
 	rootRouter.Handle("/installation/{id}", addContext(handleGetTranslationStatusByInstallation)).Methods("GET")
 }
 
@@ -35,9 +35,17 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request) {
+	getTranslationStatus(c, w, r, c.Store.GetTranslation)
+}
+
+func handleGetTranslationStatusByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	getTranslationStatus(c, w, r, c.Store.GetTranslationByInstallation)
+}
+
+func getTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request, getter func(id string) (*model.Translation, error)) {
 	vars := mux.Vars(r)
 	transactionID := vars["id"]
-	transaction, err := c.Store.GetTranslation(transactionID)
+	transaction, err := getter(transactionID)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to fetch transaction with ID %s", transactionID)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -56,10 +64,6 @@ func handleGetTranslationStatus(c *Context, w http.ResponseWriter, r *http.Reque
 			InstallationID: transaction.InstallationID,
 			State:          transaction.State(),
 		})
-}
-
-func handleGetTranslationStatusByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
-
 }
 
 // outputJSON is a helper method to write the given data as JSON to the given writer.

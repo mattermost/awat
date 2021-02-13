@@ -1,4 +1,4 @@
-package client
+package model
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/mattermost/awat/internal/model"
 	"github.com/pkg/errors"
 )
 
@@ -26,12 +25,18 @@ func NewClient(address string) *Client {
 	}
 }
 
-func StartTranslation(translationRequest *model.TranslationRequest) error {
-	return nil
+func (c *Client) StartTranslation(translationRequest *TranslationRequest) error {
+	_, err := c.doPost("/translate", translationRequest)
+	return err
 }
 
-func GetTranslationStatus(translationId string) (*model.TranslationStatus, error) {
-	return nil, nil
+func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus, error) {
+	resp, err := c.doGet(fmt.Sprintf("/translate/%s", translationId))
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTranslationStatusFromReader(resp.Body)
 }
 
 // closeBody ensures the Body of an http.Response is properly closed.
