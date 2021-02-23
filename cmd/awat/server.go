@@ -16,14 +16,28 @@ import (
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
 )
 
+const (
+	databaseFlag = "database"
+	listenFlag   = "listen"
+	bucket       = "bucket"
+	server       = "server"
+)
+
+func init() {
+	serverCmd.PersistentFlags().String(listenFlag, "localhost:8077", "Local interface and port to listen on")
+	serverCmd.PersistentFlags().String(bucket, "", "S3 URI where the input can be found and to which the output can be written")
+	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
+	serverCmd.MarkPersistentFlagRequired(bucket)
+}
+
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Run the AWAT server.",
 	RunE: func(command *cobra.Command, args []string) error {
 
-		listen, _ := command.Flags().GetString("listen")
+		listen, _ := command.Flags().GetString(listenFlag)
 		if listen == "" {
-			return fmt.Errorf("the server command requires the --listen flag")
+			return fmt.Errorf("the server command requires the --listen flag not be empty")
 		}
 
 		sqlStore, err := sqlStore(command)
@@ -66,7 +80,6 @@ var serverCmd = &cobra.Command{
 
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		srv.Shutdown(ctx)
-		return nil
+		return srv.Shutdown(ctx)
 	},
 }

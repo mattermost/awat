@@ -12,7 +12,6 @@ type Translation struct {
 	ID             string
 	InstallationID string
 	Type           string
-	Metadata       *TranslationMetadata
 	Resource       string
 	Error          string
 	StartAt        uint64
@@ -37,7 +36,10 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 		ID:             cloudModel.NewID(),
 		InstallationID: translationRequest.InstallationID,
 		Type:           translationRequest.Type,
-		Metadata:       translationRequest.Metadata,
 		Resource:       translationRequest.Archive,
 	}
+}
+
+func NewTranslationURI(bucket, archiveName string) string {
+	return bucket + archiveName
 }

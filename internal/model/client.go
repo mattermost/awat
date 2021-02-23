@@ -25,18 +25,46 @@ func NewClient(address string) *Client {
 	}
 }
 
-func (c *Client) StartTranslation(translationRequest *TranslationRequest) error {
-	_, err := c.doPost("/translate", translationRequest)
-	return err
-}
-
-func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus, error) {
-	resp, err := c.doGet(fmt.Sprintf("/translate/%s", translationId))
+func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*TranslationStatus, error) {
+	resp, err := c.doPost(c.buildURL("/translate"), translationRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	return NewTranslationStatusFromReader(resp.Body)
+}
+
+func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/translation/%s", translationId))
+	if err != nil {
+		return nil, err
+	}
+
+	return NewTranslationStatusFromReader(resp.Body)
+}
+
+func (c *Client) GetTranslationStatusByInstallation(installationId string) (*TranslationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/installation/%s", installationId))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return NewTranslationStatusFromReader(resp.Body)
+}
+
+func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/installations"))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return NewTranslationStatusListFromReader(resp.Body)
 }
 
 // closeBody ensures the Body of an http.Response is properly closed.

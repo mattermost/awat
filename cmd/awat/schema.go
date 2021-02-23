@@ -31,6 +31,6 @@ var schemaMigrateCmd = &cobra.Command{
 }
 
 func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
-	database, _ := command.Flags().GetString("database")
+	database, _ := command.Flags().GetString(databaseFlag)
 	return store.New(database, logger)
 }

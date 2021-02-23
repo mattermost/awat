@@ -20,8 +20,8 @@ type migration struct {
 // Note that the canonical schema is currently obtained by applying all migrations to an empty
 // database.
 var migrations = []migration{
-	{
-		semver.MustParse("0.0.0"), semver.MustParse("0.1.0"), func(e execer) error {
+	{semver.MustParse("0.0.0"), semver.MustParse("0.1.0"),
+		func(e execer) error {
 			_, err := e.Exec(`
 			CREATE TABLE System (
 				Key    VARCHAR(64) PRIMARY KEY,
@@ -33,11 +33,10 @@ var migrations = []migration{
 			}
 
 			_, err = e.Exec(`
-				CREATE TABLE Transaction (
+				CREATE TABLE Translation (
 						ID              TEXT PRIMARY KEY,
 						InstallationID  TEXT,
 						Type            TEXT,
-						Metadata        BYTEA,
 						Resource        TEXT,
 						Error           TEXT,
 						StartAt         BigInt,
@@ -45,6 +44,7 @@ var migrations = []migration{
 						LockedBy        TEXT
 				);
 		`)
+
 			return err
 		},
 	},

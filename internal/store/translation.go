@@ -18,7 +18,6 @@ func init() {
 			"ID",
 			"InstallationID",
 			"Type",
-			"Metadata",
 			"Resource",
 			"Error",
 			"StartAt",
@@ -32,14 +31,34 @@ func (sqlStore *SQLStore) GetTranslation(id string) (*model.Translation, error) 
 	return sqlStore.getTranslationByField("ID", id)
 }
 
+func (sqlStore *SQLStore) GetAllTranslations() ([]*model.Translation, error) {
+	translations := []*model.Translation{}
+	err := sqlStore.getBuilder(sqlStore.db, translations, translationSelect)
+	if err != nil {
+		return nil, err
+	}
+
+	return translations, nil
+}
+
 func (sqlStore *SQLStore) GetTranslationByInstallation(id string) (*model.Translation, error) {
 	return sqlStore.getTranslationByField("InstallationID", id)
 }
 
 func (sqlStore *SQLStore) getTranslationByField(field, value string) (*model.Translation, error) {
 	translation := new(model.Translation)
-	err := sqlStore.getBuilder(sqlStore.db, translation,
-		translationSelect.Where("? = ?", field, value))
+	var err error
+	builder := translationSelect
+
+	if field == "ID" {
+		builder = builder.Where("ID = ?", value)
+	} else if field == "InstallationID" {
+		builder = builder.Where("InstallationID = ?", value)
+	} else {
+		return nil, errors.Errorf("tried to query for a translation with unsupported input field %s", field)
+	}
+
+	err = sqlStore.getBuilder(sqlStore.db, translation, builder)
 
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -57,7 +76,6 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
 			"Type":           translation.Type,
-			"Metadata":       translation.Metadata,
 			"Resource":       translation.Resource,
 			"Error":          translation.Error,
 			"StartAt":        translation.StartAt,

@@ -12,17 +12,17 @@ const SlackWorkspaceBackupType string = "slack"
 type TranslationRequest struct {
 	Type           string
 	InstallationID string
-	Metadata       *TranslationMetadata
 	Archive        string
 }
 
 type TranslationMetadata struct {
+	Options interface{}
 }
 
 type TranslationStatus struct {
-	ID             string
-	InstallationID string
-	State          string
+	Translation
+
+	State string
 }
 
 func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, error) {
@@ -41,4 +41,13 @@ func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
 	return &status, nil
+}
+
+func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus, error) {
+	var status []*TranslationStatus
+	err := json.NewDecoder(reader).Decode(&status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode translation start request")
+	}
+	return status, nil
 }
