@@ -32,13 +32,13 @@ func (sqlStore *SQLStore) GetTranslation(id string) (*model.Translation, error) 
 }
 
 func (sqlStore *SQLStore) GetAllTranslations() ([]*model.Translation, error) {
-	translations := []*model.Translation{}
-	err := sqlStore.getBuilder(sqlStore.db, translations, translationSelect)
+	translations := &[]*model.Translation{}
+	err := sqlStore.selectBuilder(sqlStore.db, translations, translationSelect)
 	if err != nil {
 		return nil, err
 	}
 
-	return translations, nil
+	return *translations, nil
 }
 
 func (sqlStore *SQLStore) GetTranslationByInstallation(id string) (*model.Translation, error) {

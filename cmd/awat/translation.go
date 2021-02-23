@@ -85,18 +85,19 @@ var listTranslationCmd = &cobra.Command{
 		awat := model.NewClient(server)
 
 		var err error
-		var status []*model.TranslationStatus
-		status, err = awat.GetAllTranslations()
+		var statuses []*model.TranslationStatus
+		statuses, err = awat.GetAllTranslations()
 
-		if len(status) == 0 {
+		if err != nil {
+			return err
+		}
+
+		if len(statuses) == 0 {
 			fmt.Println("No translations found")
+			return nil
 		}
 
-		if status != nil {
-			_ = printJSON(status)
-		}
-
-		return err
+		return printJSON(statuses)
 	},
 }
 

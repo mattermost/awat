@@ -56,7 +56,7 @@ func (c *Client) GetTranslationStatusByInstallation(installationId string) (*Tra
 }
 
 func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
-	resp, err := c.doGet(c.buildURL("/installations"))
+	resp, err := c.doGet(c.buildURL("/translations"))
 	if err != nil {
 		return nil, err
 	}
