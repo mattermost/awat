@@ -50,6 +50,10 @@ func (sqlStore *SQLStore) getTranslationByField(field, value string) (*model.Tra
 	var err error
 	builder := translationSelect
 
+	// this could be a string replace to be more flexible, but at the
+	// risk of allowing fields to be specified here that are not
+	// previously ordained by this software.
+	// Instead
 	if field == "ID" {
 		builder = builder.Where("ID = ?", value)
 	} else if field == "InstallationID" {

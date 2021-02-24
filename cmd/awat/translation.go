@@ -11,23 +11,16 @@ import (
 )
 
 func init() {
-	translationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
-	translationCmd.PersistentFlags().String(installationId, "", "ID of the Installation associated with a translation")
+	translationCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with a translation")
 	translationCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
+
+	getTranslationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
+
+	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
 	translationCmd.AddCommand(startTranslationCmd)
-
-	startTranslationCmd.MarkPersistentFlagRequired(installationId)
-	startTranslationCmd.MarkPersistentFlagRequired(archiveFilename)
-}
-
-func printJSON(data interface{}) error {
-	encoder := json.NewEncoder(os.Stdout)
-	encoder.SetIndent("", "    ")
-	return encoder.Encode(data)
-
 }
 
 const (
@@ -110,7 +103,13 @@ var startTranslationCmd = &cobra.Command{
 		awat := model.NewClient(server)
 
 		installation, _ := cmd.Flags().GetString(installationId)
+		if installation == "" {
+			return errors.New("the installation ID to which this translation pertains must be specified")
+		}
 		archive, _ := cmd.Flags().GetString(archiveFilename)
+		if archive == "" {
+			return errors.New("the archive filename to which this translation pertains must be specified")
+		}
 
 		var err error
 		var status *model.TranslationStatus
@@ -136,4 +135,10 @@ var translationCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return nil
 	},
+}
+
+func printJSON(data interface{}) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "    ")
+	return encoder.Encode(data)
 }
