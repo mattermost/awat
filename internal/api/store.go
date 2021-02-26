@@ -7,5 +7,5 @@ type Store interface {
 	GetTranslationByInstallation(id string) (*model.Translation, error)
 	GetAllTranslations() ([]*model.Translation, error)
 	StoreTranslation(t *model.Translation) error
-	UpdateTranslation(t *model.Translation) (*model.Translation, error)
+	UpdateTranslation(t *model.Translation) error
 }

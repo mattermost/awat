@@ -45,6 +45,16 @@ func (sqlStore *SQLStore) GetTranslationByInstallation(id string) (*model.Transl
 	return sqlStore.getTranslationByField("InstallationID", id)
 }
 
+func (sqlStore *SQLStore) GetTranslationsReadyToStart() ([]*model.Translation, error) {
+	translations := &[]*model.Translation{}
+	err := sqlStore.selectBuilder(sqlStore.db, translations, translationSelect.Where("StartAt = 0"))
+	if err != nil {
+		return nil, err
+	}
+
+	return *translations, nil
+}
+
 func (sqlStore *SQLStore) getTranslationByField(field, value string) (*model.Translation, error) {
 	translation := new(model.Translation)
 	var err error
@@ -53,7 +63,6 @@ func (sqlStore *SQLStore) getTranslationByField(field, value string) (*model.Tra
 	// this could be a string replace to be more flexible, but at the
 	// risk of allowing fields to be specified here that are not
 	// previously ordained by this software.
-	// Instead
 	if field == "ID" {
 		builder = builder.Where("ID = ?", value)
 	} else if field == "InstallationID" {
@@ -90,6 +99,19 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 	return err
 }
 
-func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) (*model.Translation, error) {
-	return nil, nil
+func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update(TranslationTableName).
+		SetMap(map[string]interface{}{
+			"ID":             translation.ID,
+			"InstallationID": translation.InstallationID,
+			"Type":           translation.Type,
+			"Resource":       translation.Resource,
+			"Error":          translation.Error,
+			"StartAt":        translation.StartAt,
+			"CompleteAt":     translation.CompleteAt,
+			"LockedBy":       translation.LockedBy,
+		}).Where("ID = ?", translation.ID),
+	)
+	return err
 }

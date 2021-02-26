@@ -14,8 +14,8 @@ type Translation struct {
 	Type           string
 	Resource       string
 	Error          string
-	StartAt        uint64
-	CompleteAt     uint64
+	StartAt        int64
+	CompleteAt     int64
 	LockedBy       string
 }
 
@@ -38,8 +38,4 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 		Type:           translationRequest.Type,
 		Resource:       translationRequest.Archive,
 	}
-}
-
-func NewTranslationURI(bucket, archiveName string) string {
-	return bucket + archiveName
 }

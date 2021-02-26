@@ -52,6 +52,8 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, translationStatusFromTranslation(translation))
+
+	c.Logger.Debugf("Started new translation with ID %s for Installation %s", translation.ID, translation.InstallationID)
 }
 
 func handleGetTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request) {

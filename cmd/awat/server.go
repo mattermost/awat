@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/mattermost/awat/internal/api"
+	"github.com/mattermost/awat/internal/supervisor"
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
 )
 
@@ -35,6 +37,9 @@ var serverCmd = &cobra.Command{
 	Short: "Run the AWAT server.",
 	RunE: func(command *cobra.Command, args []string) error {
 
+		logger.SetLevel(logrus.DebugLevel) // TODO add a flag for this
+		logger.Debug("debug level")
+
 		listen, _ := command.Flags().GetString(listenFlag)
 		if listen == "" {
 			return fmt.Errorf("the server command requires the --listen flag not be empty")
@@ -44,6 +49,9 @@ var serverCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+
+		supervisor := supervisor.NewSupervisor(sqlStore, bucket)
+		supervisor.Start()
 
 		router := mux.NewRouter()
 		api.Register(router, &api.Context{

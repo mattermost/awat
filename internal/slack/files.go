@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-func FetchAttachedFiles(inputArchive, destinationS3URI string) error {
+func FetchAttachedFiles(inputArchive, destinationS3Bucket string) error {
 	// Open the input archive.
 	r, err := zip.OpenReader(inputArchive)
 	if err != nil {
@@ -53,7 +53,7 @@ func FetchAttachedFiles(inputArchive, destinationS3URI string) error {
 		if len(splits) == 2 && strings.HasSuffix(splits[1], ".json") {
 			// Parse this file.
 			log.Printf("processing file %s", file.Name)
-			err = processChannelFile(file, inBuf, destinationS3URI)
+			err = processChannelFile(file, inBuf, destinationS3Bucket)
 			if err != nil {
 				return err
 			}
@@ -63,12 +63,12 @@ func FetchAttachedFiles(inputArchive, destinationS3URI string) error {
 	return nil
 }
 
-func processChannelFile(file *zip.File, inBuf []byte, bucket string) error {
+func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string) error {
 
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
-		return errors.New("Couldn't parse the JSON file: " + file.Name + "\n\n" + err.Error() + "\n")
+		return errors.New("Couldn't parse the JSON file: " + inputFile.Name + "\n\n" + err.Error() + "\n")
 	}
 
 	// Loop through all the posts.
@@ -107,7 +107,7 @@ func processChannelFile(file *zip.File, inBuf []byte, bucket string) error {
 			}
 
 			// Fetch the file.
-			outputPath := file.Id + "/" + file.Name
+			outputPath := fmt.Sprintf("%s/%s/%s", inputFile.Name, file.Id, file.Name)
 			fmt.Printf("Downloading attachment %s to %s/%s.\n", file.Id, bucket, outputPath)
 			response, err := http.Get(downloadUrl)
 			if err != nil {
