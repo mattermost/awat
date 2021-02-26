@@ -21,15 +21,15 @@ import (
 const (
 	databaseFlag = "database"
 	listenFlag   = "listen"
-	bucket       = "bucket"
+	bucketFlag   = "bucket"
 	server       = "server"
 )
 
 func init() {
 	serverCmd.PersistentFlags().String(listenFlag, "localhost:8077", "Local interface and port to listen on")
-	serverCmd.PersistentFlags().String(bucket, "", "S3 URI where the input can be found and to which the output can be written")
+	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found and to which the output can be written")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
-	serverCmd.MarkPersistentFlagRequired(bucket)
+	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
 
 var serverCmd = &cobra.Command{
@@ -38,7 +38,6 @@ var serverCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) error {
 
 		logger.SetLevel(logrus.DebugLevel) // TODO add a flag for this
-		logger.Debug("debug level")
 
 		listen, _ := command.Flags().GetString(listenFlag)
 		if listen == "" {
@@ -50,7 +49,9 @@ var serverCmd = &cobra.Command{
 			return err
 		}
 
-		supervisor := supervisor.NewSupervisor(sqlStore, bucket)
+		bucket, _ := command.Flags().GetString(bucketFlag)
+
+		supervisor := supervisor.NewSupervisor(sqlStore, logger, bucket)
 		supervisor.Start()
 
 		router := mux.NewRouter()

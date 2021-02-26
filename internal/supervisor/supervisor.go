@@ -16,15 +16,16 @@ type Supervisor struct {
 	bucket string
 }
 
-func NewSupervisor(store *store.SQLStore, bucket string) *Supervisor {
+func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket string) *Supervisor {
 	return &Supervisor{
 		store:  store,
-		logger: log.New().WithField("supervisor", model.NewID()),
+		logger: logger.WithField("supervisor", model.NewID()),
 		bucket: bucket,
 	}
 }
 
 func (s *Supervisor) Start() {
+	s.logger.Info("Supervisor started")
 	go func() {
 		for {
 			s.supervise()
@@ -34,15 +35,15 @@ func (s *Supervisor) Start() {
 }
 
 func (s *Supervisor) supervise() {
-	s.logger.Info("Supervisor started")
 	work, err := s.store.GetTranslationsReadyToStart()
 	if err != nil {
 		s.logger.WithError(err).Error("failed to query database for pending translations")
 		return
 	}
-	s.logger.Debugf("found %d requests pending to be translated")
+
+	s.logger.Debugf("Found %d requests pending to be translated", len(work))
 	for _, translation := range work {
-		s.logger.Debugf("translating %s for Installation %s...", translation.ID, translation.InstallationID)
+		s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
 		translator, err := translator.NewTranslator(translation.Type)
 		if err != nil {
 			s.logger.WithError(err).Error("failed to create translator for Translation %s", translation.ID)
@@ -57,6 +58,14 @@ func (s *Supervisor) supervise() {
 		err = translator.Translate(translation, s.bucket)
 		if err != nil {
 			s.logger.WithError(err).Errorf("failed to translate Translation %s", translation.ID)
+			continue
+		}
+
+		translation.CompleteAt = time.Now().UnixNano() / 1000
+		err = s.store.UpdateTranslation(translation)
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to store completed Translation %s; the Translation may be erroneously repeated!", translation.ID)
+			continue
 		}
 	}
 }
