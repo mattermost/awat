@@ -23,10 +23,10 @@ var migrations = []migration{
 	{semver.MustParse("0.0.0"), semver.MustParse("0.1.0"),
 		func(e execer) error {
 			_, err := e.Exec(`
-			CREATE TABLE System (
-				Key    VARCHAR(64) PRIMARY KEY,
-				Value  VARCHAR(1024) NULL
-			);
+				CREATE TABLE System (
+						Key    VARCHAR(64) PRIMARY KEY,
+						Value  VARCHAR(1024) NULL
+				);
 		`)
 			if err != nil {
 				return err
@@ -41,6 +41,7 @@ var migrations = []migration{
 						Error           TEXT,
 						StartAt         BigInt,
 						CompleteAt      BigInt,
+						Team            TEXT,
 						LockedBy        TEXT
 				);
 		`)

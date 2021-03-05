@@ -47,13 +47,21 @@ func (_ *SlackTranslator) Translate(translation *model.Translation, bucket strin
 	logger.Debugf("Successfully downloaded %d bytes from bucket %s key %s",
 		nBytes, bucket, translation.Resource)
 
-	// fetch attached files
+	// fetch attached files and store them in S3
 	err = FetchAttachedFiles(translation.Resource, archive.Name(), bucket)
 	if err != nil {
 		return err
 	}
 
-	//TODO translate messages, too
+	// transform the actual messages
+	err = TransformSlackMessages(
+		archive.Name(),
+		fmt.Sprintf("%s-MBIF.jsonl", archive.Name()),
+		translation.Team)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to transform Slack archive to MBIF")
+	}
 
 	logger.Infof("Successfully translated %s", translation.ID)
 	return nil

@@ -63,6 +63,10 @@ func FetchAttachedFiles(originalResourceName, inputArchive, destinationS3Bucket 
 	return nil
 }
 
+func buildFilePath(f *SlackFile, prefix string) string {
+	return fmt.Sprintf("%s/%s/%s", prefix, f.Id, f.Name)
+}
+
 func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputArchiveName string) error {
 
 	// Parse the JSON of the file.
@@ -107,8 +111,8 @@ func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputA
 			}
 
 			// Fetch the file.
-			outputPath := fmt.Sprintf("%s/%s/%s", inputArchiveName, file.Id, file.Name)
-			fmt.Printf("Downloading attachment %s to %s/%s.\n", file.Id, bucket, outputPath)
+			outputPath := buildFilePath(file, inputArchiveName)
+			log.Printf("Downloading attachment %s to %s/%s.\n", file.Id, bucket, outputPath)
 			response, err := http.Get(downloadUrl)
 			if err != nil {
 				log.Print("Failed to download the file: " + downloadUrl)
@@ -135,6 +139,8 @@ func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputA
 			}
 
 			log.Printf("uploaded %s", output.Location)
+
+			file.Name = outputPath
 		}
 	}
 

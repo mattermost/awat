@@ -66,10 +66,10 @@ func handleGetTranslationStatusByInstallation(c *Context, w http.ResponseWriter,
 
 func getTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request, getter func(id string) (*model.Translation, error)) {
 	vars := mux.Vars(r)
-	transactionID := vars["id"]
-	translation, err := getter(transactionID)
+	translationID := vars["id"]
+	translation, err := getter(translationID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to fetch transaction with ID %s", transactionID)
+		c.Logger.WithError(err).Errorf("failed to fetch transaction with ID %s", translationID)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

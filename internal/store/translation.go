@@ -15,14 +15,15 @@ var translationSelect sq.SelectBuilder
 func init() {
 	translationSelect = sq.
 		Select(
+			"CompleteAt",
+			"Error",
 			"ID",
 			"InstallationID",
-			"Type",
-			"Resource",
-			"Error",
-			"StartAt",
-			"CompleteAt",
 			"LockedBy",
+			"Resource",
+			"StartAt",
+			"Team",
+			"Type",
 		).
 		From(TranslationTableName)
 }
@@ -86,14 +87,15 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(TranslationTableName).
 		SetMap(map[string]interface{}{
+			"CompleteAt":     translation.CompleteAt,
+			"Error":          translation.Error,
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
-			"Type":           translation.Type,
-			"Resource":       translation.Resource,
-			"Error":          translation.Error,
-			"StartAt":        translation.StartAt,
-			"CompleteAt":     translation.CompleteAt,
 			"LockedBy":       translation.LockedBy,
+			"Resource":       translation.Resource,
+			"StartAt":        translation.StartAt,
+			"Team":           translation.Team,
+			"Type":           translation.Type,
 		}),
 	)
 	return err
@@ -103,14 +105,15 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(TranslationTableName).
 		SetMap(map[string]interface{}{
+			"CompleteAt":     translation.CompleteAt,
+			"Error":          translation.Error,
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
-			"Type":           translation.Type,
-			"Resource":       translation.Resource,
-			"Error":          translation.Error,
-			"StartAt":        translation.StartAt,
-			"CompleteAt":     translation.CompleteAt,
 			"LockedBy":       translation.LockedBy,
+			"Resource":       translation.Resource,
+			"StartAt":        translation.StartAt,
+			"Team":           translation.Team,
+			"Type":           translation.Type,
 		}).Where("ID = ?", translation.ID),
 	)
 	return err

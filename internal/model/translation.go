@@ -11,6 +11,7 @@ const TranslationStateComplete = "transaction-complete"
 type Translation struct {
 	ID             string
 	InstallationID string
+	Team           string
 	Type           string
 	Resource       string
 	Error          string
@@ -37,5 +38,6 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 		InstallationID: translationRequest.InstallationID,
 		Type:           translationRequest.Type,
 		Resource:       translationRequest.Archive,
+		Team:           translationRequest.Team,
 	}
 }

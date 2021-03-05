@@ -13,6 +13,7 @@ type TranslationRequest struct {
 	Type           string
 	InstallationID string
 	Archive        string
+	Team           string
 }
 
 type TranslationMetadata struct {

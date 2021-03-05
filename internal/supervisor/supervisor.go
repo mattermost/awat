@@ -37,7 +37,7 @@ func (s *Supervisor) Start() {
 func (s *Supervisor) supervise() {
 	work, err := s.store.GetTranslationsReadyToStart()
 	if err != nil {
-		s.logger.WithError(err).Error("failed to query database for pending translations")
+		s.logger.WithError(err).Error("Failed to query database for pending translations")
 		return
 	}
 

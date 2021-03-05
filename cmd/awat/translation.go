@@ -10,6 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	translationId   = "translation-id"
+	installationId  = "installation-id"
+	serverFlag      = "server"
+	archiveFilename = "filename"
+	teamFlag        = "team"
+)
+
 func init() {
 	translationCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with a translation")
 	translationCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
@@ -18,17 +26,12 @@ func init() {
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 
+	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
+
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
 	translationCmd.AddCommand(startTranslationCmd)
 }
-
-const (
-	translationId   = "translation-id"
-	installationId  = "installation-id"
-	serverFlag      = "server"
-	archiveFilename = "filename"
-)
 
 var getTranslationCmd = &cobra.Command{
 	Use:   "get",
@@ -106,6 +109,10 @@ var startTranslationCmd = &cobra.Command{
 		if installation == "" {
 			return errors.New("the installation ID to which this translation pertains must be specified")
 		}
+		team, _ := cmd.Flags().GetString(teamFlag)
+		if team == "" {
+			return errors.New("the team name to which this translation pertains must be specified")
+		}
 		archive, _ := cmd.Flags().GetString(archiveFilename)
 		if archive == "" {
 			return errors.New("the archive filename to which this translation pertains must be specified")
@@ -118,6 +125,7 @@ var startTranslationCmd = &cobra.Command{
 				Type:           model.SlackWorkspaceBackupType,
 				InstallationID: installation,
 				Archive:        archive,
+				Team:           team,
 			})
 
 		if status != nil {
