@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -47,7 +48,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) error {
 		inputArchiveName,
 	)
 
-	mbifName := workdir + "/" + translation.InstallationID + "_MBIF.jsonl"
+	mbifName := fmt.Sprintf("%s/%s_MBIF.jsonl", workdir, translation.InstallationID)
 	logger.Infof("Transforming Slack archive for Translation %s to MBIF", translation.ID)
 	err = TransformSlack(
 		archiveWithFilesName,
@@ -59,7 +60,15 @@ func (st *SlackTranslator) Translate(translation *model.Translation) error {
 		return errors.Wrap(err, "failed to transform Slack archive to MBIF")
 	}
 
-	_, err := st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
+	outputZip, err := st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
+	if err != nil {
+		return err
+	}
+
+	err = st.uploadTransformedZip(outputZip, st.bucket)
+	if err != nil {
+		return err
+	}
 
 	logger.Infof("Finished translation %s", translation.ID)
 	return nil
@@ -181,4 +190,25 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 	}
 
 	return output.Name(), nil
+}
+
+func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
+	sess := session.Must(session.NewSession())
+	uploader := s3manager.NewUploader(sess)
+	body, err := os.Open(output)
+	if err != nil {
+		return nil
+	}
+	outputNameSplitPath := strings.Split(output, "/")
+	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
+	_, err = uploader.Upload(
+		&s3manager.UploadInput{
+			Bucket: &bucket,
+			Body:   body,
+			Key:    &outputShortName,
+		})
+	if err != nil {
+		return err
+	}
+	return nil
 }
