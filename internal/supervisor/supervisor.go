@@ -11,16 +11,18 @@ import (
 )
 
 type Supervisor struct {
-	logger log.FieldLogger
-	store  *store.SQLStore
-	bucket string
+	logger  log.FieldLogger
+	store   *store.SQLStore
+	bucket  string
+	workdir string
 }
 
-func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket string) *Supervisor {
+func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdir string) *Supervisor {
 	return &Supervisor{
-		store:  store,
-		logger: logger.WithField("supervisor", model.NewID()),
-		bucket: bucket,
+		store:   store,
+		logger:  logger.WithField("supervisor", model.NewID()),
+		bucket:  bucket,
+		workdir: workdir,
 	}
 }
 
@@ -41,10 +43,17 @@ func (s *Supervisor) supervise() {
 		return
 	}
 
-	s.logger.Debugf("Found %d requests pending to be translated", len(work))
+	if len(work) > 0 {
+		s.logger.Debugf("Found %d requests pending to be translated", len(work))
+	}
 	for _, translation := range work {
 		s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
-		translator, err := translator.NewTranslator(translation.Type)
+		translator, err := translator.NewTranslator(
+			&translator.TranslatorOptions{
+				ArchiveType: translation.Type,
+				Bucket:      s.bucket,
+				WorkingDir:  s.workdir,
+			})
 		if err != nil {
 			s.logger.WithError(err).Error("failed to create translator for Translation %s", translation.ID)
 			continue
@@ -55,7 +64,7 @@ func (s *Supervisor) supervise() {
 			s.logger.WithError(err).Errorf("failed to mark Translation %s as started; will not claim or begin translation process at this time", translation.ID)
 			continue
 		}
-		err = translator.Translate(translation, s.bucket)
+		err = translator.Translate(translation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("failed to translate Translation %s", translation.ID)
 			continue

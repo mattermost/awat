@@ -5,23 +5,42 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 )
 
-func FetchAttachedFiles(originalResourceName, inputArchive, destinationS3Bucket string) error {
+// TODO logging jfc
+
+func FetchAttachedFiles(inputArchive string, outputArchive string) error {
+
+	// Check the parameters.
+	if len(inputArchive) == 0 {
+		return fmt.Errorf("fetch-attachments command requires --input-archive to be specified.\n")
+	}
+	if len(outputArchive) == 0 {
+		return fmt.Errorf("fetch-attachments command requires --output-archive to be specified.\n")
+	}
+
 	// Open the input archive.
 	r, err := zip.OpenReader(inputArchive)
 	if err != nil {
-		return fmt.Errorf("Could not open input archive for reading: %s\n", inputArchive)
+		return fmt.Errorf("could not open input archive for reading: %s\n", inputArchive)
 	}
 	defer r.Close()
+
+	// Open the output archive.
+	f, err := os.Create(outputArchive)
+	if err != nil {
+		return fmt.Errorf("could not open the output archive for writing: %s\n\n%s", outputArchive, err)
+	}
+	defer f.Close()
+
+	// Create a zip writer on the output archive.
+	w := zip.NewWriter(f)
 
 	// Run through all the files in the input archive.
 	for _, file := range r.File {
@@ -30,49 +49,54 @@ func FetchAttachedFiles(originalResourceName, inputArchive, destinationS3Bucket 
 		inReader, err := file.Open()
 		if err != nil {
 			fmt.Printf("Failed to open file in input archive: %s\n\n%s", file.Name, err)
-			os.Exit(1)
+			continue
 		}
 
 		// Read the file into a byte array.
 		inBuf, err := ioutil.ReadAll(inReader)
 		if err != nil {
 			fmt.Printf("Failed to read file in input archive: %s\n\n%s", file.Name, err)
+			continue
 		}
 
-		// Now upload this file to S3
-		// TODO
-		if strings.HasSuffix(file.Name, "/") {
-			log.Printf("found directory %s", file.Name)
+		// Now write this file to the output archive.
+		outFile, err := w.Create(file.Name)
+		if err != nil {
+			return fmt.Errorf("Failed to create file in output archive: %s\n\n%s", file.Name, err)
+		}
+		_, err = outFile.Write(inBuf)
+		if err != nil {
+			fmt.Printf("Failed to write file in output archive: %s\n\n%s", file.Name, err)
 			continue
-		} else {
-			log.Printf("found file %s", file.Name)
 		}
 
 		// Check if the file name matches the pattern for files we need to parse.
 		splits := strings.Split(file.Name, "/")
-		if len(splits) == 2 && strings.HasSuffix(splits[1], ".json") {
+		if len(splits) == 2 && !strings.HasPrefix(splits[0], "__") && strings.HasSuffix(splits[1], ".json") {
 			// Parse this file.
-			log.Printf("processing file %s", file.Name)
-			err = processChannelFile(file, inBuf, destinationS3Bucket, originalResourceName)
+			err = processChannelFile(w, file, inBuf)
 			if err != nil {
-				return err
+				fmt.Printf("%s", err)
+				continue
 			}
 		}
+	}
+
+	// Close the output zip writer.
+	err = w.Close()
+	if err != nil {
+		fmt.Printf("Failed to close the output archive.\n\n%s", err)
 	}
 
 	return nil
 }
 
-func buildFilePath(f *SlackFile, prefix string) string {
-	return fmt.Sprintf("%s/%s/%s", prefix, f.Id, f.Name)
-}
-
-func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputArchiveName string) error {
+func processChannelFile(w *zip.Writer, file *zip.File, inBuf []byte) error {
 
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
-		return errors.New("Couldn't parse the JSON file: " + inputFile.Name + "\n\n" + err.Error() + "\n")
+		return errors.New("Couldn't parse the JSON file: " + file.Name + "\n\n" + err.Error() + "\n")
 	}
 
 	// Loop through all the posts.
@@ -110,9 +134,17 @@ func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputA
 				downloadUrl = file.UrlPrivate
 			}
 
+			// Build the output file path.
+			outputPath := "__uploads/" + file.Id + "/" + file.Name
+
+			// Create the file in the zip output file.
+			outFile, err := w.Create(outputPath)
+			if err != nil {
+				log.Print("Failed to create output file in output archive: " + outputPath + "\n\n" + err.Error() + "\n")
+				continue
+			}
+
 			// Fetch the file.
-			outputPath := buildFilePath(file, inputArchiveName)
-			log.Printf("Downloading attachment %s to %s/%s.\n", file.Id, bucket, outputPath)
 			response, err := http.Get(downloadUrl)
 			if err != nil {
 				log.Print("Failed to download the file: " + downloadUrl)
@@ -120,27 +152,14 @@ func processChannelFile(inputFile *zip.File, inBuf []byte, bucket string, inputA
 			}
 			defer response.Body.Close()
 
-			// The session the S3 Uploader will use
-			sess := session.Must(session.NewSession())
-
-			// Create an uploader with the session and default options
-			uploader := s3manager.NewUploader(sess)
-			// Success at last.
-
-			output, err := uploader.Upload(&s3manager.UploadInput{
-				Bucket: &bucket,
-				Body:   response.Body,
-				Key:    &outputPath,
-			})
-
+			// Save the file to the output zip file.
+			_, err = io.Copy(outFile, response.Body)
 			if err != nil {
-				log.Printf("failed to upload %s: %s", outputPath, err.Error())
-				continue
+				log.Print("Failed to write the downloaded file to the output archive: " + downloadUrl + "\n\n" + err.Error() + "\n")
 			}
 
-			log.Printf("uploaded %s", output.Location)
-
-			file.Name = outputPath
+			// Success at last.
+			fmt.Printf("Downloaded attachment into output archive: %s.\n", file.Id)
 		}
 	}
 

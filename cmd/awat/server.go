@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -19,15 +20,17 @@ import (
 )
 
 const (
-	databaseFlag = "database"
-	listenFlag   = "listen"
-	bucketFlag   = "bucket"
-	server       = "server"
+	databaseFlag     = "database"
+	listenFlag       = "listen"
+	bucketFlag       = "bucket"
+	workingDirectory = "workdir"
+	server           = "server"
 )
 
 func init() {
 	serverCmd.PersistentFlags().String(listenFlag, "localhost:8077", "Local interface and port to listen on")
-	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found and to which the output can be written")
+	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found")
+	serverCmd.PersistentFlags().String(workingDirectory, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
 	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
@@ -44,6 +47,21 @@ var serverCmd = &cobra.Command{
 			return fmt.Errorf("the server command requires the --listen flag not be empty")
 		}
 
+		workdir, _ := command.Flags().GetString(workingDirectory)
+		if workdir == "" {
+			return fmt.Errorf("the server command requires the --workdir flag not be empty")
+		}
+
+		_, err := os.Stat(workdir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				// this message might wind up being somewhat redundant but that's alright
+				return errors.Wrapf(err, "the provided path for the working directory \"%s\" does not exist. Create it and try again?", workdir)
+			} else {
+				return errors.Wrapf(err, "failed to check status of working directory \"%s\"", workdir)
+			}
+		}
+
 		sqlStore, err := sqlStore(command)
 		if err != nil {
 			return err
@@ -51,7 +69,7 @@ var serverCmd = &cobra.Command{
 
 		bucket, _ := command.Flags().GetString(bucketFlag)
 
-		supervisor := supervisor.NewSupervisor(sqlStore, logger, bucket)
+		supervisor := supervisor.NewSupervisor(sqlStore, logger, bucket, workdir)
 		supervisor.Start()
 
 		router := mux.NewRouter()
