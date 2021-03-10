@@ -43,7 +43,7 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 	return NewTranslationStatusFromReader(resp.Body)
 }
 
-func (c *Client) GetTranslationStatusByInstallation(installationId string) (*TranslationStatus, error) {
+func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]*TranslationStatus, error) {
 	resp, err := c.doGet(c.buildURL("/installation/%s", installationId))
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (c *Client) GetTranslationStatusByInstallation(installationId string) (*Tra
 		return nil, nil
 	}
 
-	return NewTranslationStatusFromReader(resp.Body)
+	return NewTranslationStatusListFromReader(resp.Body)
 }
 
 func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {

@@ -52,23 +52,28 @@ var getTranslationCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(server)
 		awat := model.NewClient(server)
 
-		var err error
-		var status *model.TranslationStatus
 		if installation != "" {
-			status, err = awat.GetTranslationStatusByInstallation(installation)
+			status, err := awat.GetTranslationStatusesByInstallation(installation)
+			if len(status) > 0 {
+				_ = printJSON(status)
+				return err
+			}
 		} else {
-			status, err = awat.GetTranslationStatus(translation)
+			status, err := awat.GetTranslationStatus(translation)
+			if err != nil {
+				return err
+			}
+
+			if status == nil {
+				fmt.Println("No translations found")
+			}
+
+			if status != nil {
+				_ = printJSON(status)
+			}
 		}
 
-		if status == nil {
-			fmt.Println("No translations found")
-		}
-
-		if status != nil {
-			_ = printJSON(status)
-		}
-
-		return err
+		return nil
 	},
 }
 

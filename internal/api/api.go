@@ -17,8 +17,8 @@ func Register(rootRouter *mux.Router, context *Context) {
 
 	rootRouter.Handle("/translate", addContext(handleStartTranslation)).Methods("POST")
 	rootRouter.Handle("/translation/{id}", addContext(handleGetTranslationStatus)).Methods("GET")
-	rootRouter.Handle("/translations", addContext(handleGetAllTranslations)).Methods("GET") // TODO paginated
-	rootRouter.Handle("/installation/{id}", addContext(handleGetTranslationStatusByInstallation)).Methods("GET")
+	rootRouter.Handle("/translations", addContext(handleGetAllTranslations)).Methods("GET") // TODO pagination
+	rootRouter.Handle("/installation/{id}", addContext(handleGetTranslationStatusesByInstallation)).Methods("GET")
 }
 
 func handleGetAllTranslations(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -57,17 +57,9 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request) {
-	getTranslationStatus(c, w, r, c.Store.GetTranslation)
-}
-
-func handleGetTranslationStatusByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
-	getTranslationStatus(c, w, r, c.Store.GetTranslationByInstallation)
-}
-
-func getTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request, getter func(id string) (*model.Translation, error)) {
 	vars := mux.Vars(r)
 	translationID := vars["id"]
-	translation, err := getter(translationID)
+	translation, err := c.Store.GetTranslation(translationID)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to fetch transaction with ID %s", translationID)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -81,6 +73,21 @@ func getTranslationStatus(c *Context, w http.ResponseWriter, r *http.Request, ge
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	outputJSON(c, w, translationStatusFromTranslation(translation))
+}
+
+func handleGetTranslationStatusesByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	translations, err := c.Store.GetTranslationsByInstallation(id)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to fetch translations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, translations)
 }
 
 // outputJSON is a helper method to write the given data as JSON to the given writer.

@@ -13,8 +13,6 @@ import (
 	"strings"
 )
 
-// TODO logging jfc
-
 func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 
 	// Check the parameters.
