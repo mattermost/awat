@@ -18,6 +18,7 @@ type Translation struct {
 	InstallationID   string
 	Team             string
 	Type             string
+	Output           string
 	Resource         string
 	Error            string
 	StartAt          int64

@@ -9,7 +9,7 @@ import (
 )
 
 type Translator interface {
-	Translate(translation *model.Translation) error
+	Translate(translation *model.Translation) (string, error)
 }
 
 type Metadata struct {

@@ -64,13 +64,19 @@ func (s *Supervisor) supervise() {
 			s.logger.WithError(err).Errorf("failed to mark Translation %s as started; will not claim or begin translation process at this time", translation.ID)
 			continue
 		}
-		err = translator.Translate(translation)
+		output, err := translator.Translate(translation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("failed to translate Translation %s", translation.ID)
+			translation.Error = err.Error()
+			err = s.store.UpdateTranslation(translation)
+			if err != nil {
+				s.logger.WithError(err).Errorf("failed to store error from failed translation")
+			}
 			continue
 		}
 
 		translation.CompleteAt = time.Now().UnixNano() / 1000
+		translation.Output = output
 		err = s.store.UpdateTranslation(translation)
 		if err != nil {
 			s.logger.WithError(err).Warnf("failed to store completed Translation %s; the Translation may be erroneously repeated!", translation.ID)

@@ -26,18 +26,18 @@ func NewSlackTranslator(bucket, workingDir string) *SlackTranslator {
 	return &SlackTranslator{bucket: bucket, workingDir: workingDir}
 }
 
-func (st *SlackTranslator) Translate(translation *model.Translation) error {
+func (st *SlackTranslator) Translate(translation *model.Translation) (string, error) {
 	workdir := fmt.Sprintf("%s/%s", st.workingDir, translation.ID)
 	err := os.Mkdir(workdir, 0700)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	logger := logrus.New()
 
 	inputArchiveName, err := st.fetchSlackArchive(logger, workdir, translation.Resource)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	attachmentDirName := fmt.Sprintf("%s/attachments", workdir)
@@ -57,21 +57,24 @@ func (st *SlackTranslator) Translate(translation *model.Translation) error {
 		attachmentDirName,
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to transform Slack archive to MBIF")
+		return "", errors.Wrap(err, "failed to transform Slack archive to MBIF")
 	}
 
 	outputZip, err := st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = st.uploadTransformedZip(outputZip, st.bucket)
 	if err != nil {
-		return err
+		return "", err
 	}
 
+	outputNameSplitPath := strings.Split(outputZip, "/")
+	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
 	logger.Infof("Finished translation %s", translation.ID)
-	return nil
+
+	return outputShortName, nil
 }
 
 func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir, resource string) (string, error) {
@@ -199,8 +202,6 @@ func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
 	if err != nil {
 		return nil
 	}
-	outputNameSplitPath := strings.Split(output, "/")
-	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
 	_, err = uploader.Upload(
 		&s3manager.UploadInput{
 			Bucket: &bucket,
