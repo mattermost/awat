@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/awat/internal/model"
@@ -22,6 +23,8 @@ func init() {
 			"LockedBy",
 			"Resource",
 			"StartAt",
+			"ImportStartAt",
+			"ImportCompleteAt",
 			"Team",
 			"Type",
 		).
@@ -71,6 +74,61 @@ func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Tra
 	return *translations, nil
 }
 
+func (sqlStore *SQLStore) GetTranslationReadyToImport(provisionerID string) (*model.Translation, error) {
+	translation := new(model.Translation)
+	const tries = 5
+
+	for count := 0; count < tries; count++ {
+		err := sqlStore.getBuilder(sqlStore.db,
+			translation,
+			translationSelect.
+				Where("LockedBy = ''").
+				OrderBy("CompleteAt DESC").
+				Limit(1),
+		)
+
+		if err == sql.ErrNoRows {
+			// success, but nothing needs to be worked on
+			return nil, nil
+		}
+
+		if err != nil {
+			// db communication error
+			return nil, errors.Wrap(err, "failed to get translation needing work")
+		}
+
+		// try to update the translation
+		translation.LockedBy = provisionerID
+		_, err = sqlStore.execBuilder(sqlStore.db, sq.
+			Update(TranslationTableName).
+			SetMap(map[string]interface{}{
+				"CompleteAt":       translation.CompleteAt,
+				"Error":            translation.Error,
+				"ID":               translation.ID,
+				"InstallationID":   translation.InstallationID,
+				"LockedBy":         translation.LockedBy,
+				"Resource":         translation.Resource,
+				"StartAt":          translation.StartAt,
+				"Team":             translation.Team,
+				"Type":             translation.Type,
+				"ImportStartAt":    translation.ImportStartAt,
+				"ImportCompleteAt": translation.ImportCompleteAt,
+			}).
+			Where("ID = ?", translation.ID).
+			Where("LockedBy = ?", ""), // be sure nobody else locked it between our queries
+		)
+
+		if err == nil {
+			return translation, nil
+		}
+
+		// if there's an error here, it's almost definitely a race condition. Try again.
+		sqlStore.logger.WithError(err).Warning("failed to claim translation %s")
+	}
+
+	return nil, fmt.Errorf("failed to claim any translation despite finding some that need work after %d tries", tries)
+}
+
 func (sqlStore *SQLStore) GetTranslationsReadyToStart() ([]*model.Translation, error) {
 	translations := &[]*model.Translation{}
 	err := sqlStore.selectBuilder(sqlStore.db, translations, translationSelect.Where("StartAt = 0"))
@@ -85,15 +143,17 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(TranslationTableName).
 		SetMap(map[string]interface{}{
-			"CompleteAt":     translation.CompleteAt,
-			"Error":          translation.Error,
-			"ID":             translation.ID,
-			"InstallationID": translation.InstallationID,
-			"LockedBy":       translation.LockedBy,
-			"Resource":       translation.Resource,
-			"StartAt":        translation.StartAt,
-			"Team":           translation.Team,
-			"Type":           translation.Type,
+			"CompleteAt":       translation.CompleteAt,
+			"Error":            translation.Error,
+			"ID":               translation.ID,
+			"InstallationID":   translation.InstallationID,
+			"LockedBy":         translation.LockedBy,
+			"Resource":         translation.Resource,
+			"StartAt":          translation.StartAt,
+			"Team":             translation.Team,
+			"Type":             translation.Type,
+			"ImportStartAt":    translation.ImportStartAt,
+			"ImportCompleteAt": translation.ImportCompleteAt,
 		}),
 	)
 	return err
@@ -103,15 +163,17 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(TranslationTableName).
 		SetMap(map[string]interface{}{
-			"CompleteAt":     translation.CompleteAt,
-			"Error":          translation.Error,
-			"ID":             translation.ID,
-			"InstallationID": translation.InstallationID,
-			"LockedBy":       translation.LockedBy,
-			"Resource":       translation.Resource,
-			"StartAt":        translation.StartAt,
-			"Team":           translation.Team,
-			"Type":           translation.Type,
+			"CompleteAt":       translation.CompleteAt,
+			"Error":            translation.Error,
+			"ID":               translation.ID,
+			"InstallationID":   translation.InstallationID,
+			"LockedBy":         translation.LockedBy,
+			"Resource":         translation.Resource,
+			"StartAt":          translation.StartAt,
+			"Team":             translation.Team,
+			"Type":             translation.Type,
+			"ImportStartAt":    translation.ImportStartAt,
+			"ImportCompleteAt": translation.ImportCompleteAt,
 		}).Where("ID = ?", translation.ID),
 	)
 	return err

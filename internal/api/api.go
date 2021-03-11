@@ -19,6 +19,33 @@ func Register(rootRouter *mux.Router, context *Context) {
 	rootRouter.Handle("/translation/{id}", addContext(handleGetTranslationStatus)).Methods("GET")
 	rootRouter.Handle("/translations", addContext(handleGetAllTranslations)).Methods("GET") // TODO pagination
 	rootRouter.Handle("/installation/{id}", addContext(handleGetTranslationStatusesByInstallation)).Methods("GET")
+
+	rootRouter.Handle("/import", addContext(handleStartImport)).Methods("POST")
+}
+
+func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
+	workRequest, err := model.NewImportWorkRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to unmarshal request for work")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	work, err := c.Store.GetTranslationReadyToImport(workRequest.ProvisionerID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to fetch translations")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if work == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, translationStatusFromTranslation(work))
 }
 
 func handleGetAllTranslations(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -31,7 +58,11 @@ func handleGetAllTranslations(c *Context, w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, translations)
+	translationStatuses := []*model.TranslationStatus{}
+	for _, t := range translations {
+		translationStatuses = append(translationStatuses, translationStatusFromTranslation(t))
+	}
+	outputJSON(c, w, translationStatuses)
 }
 
 func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) {

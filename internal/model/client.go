@@ -67,6 +67,18 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	return NewTranslationStatusListFromReader(resp.Body)
 }
 
+func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*TranslationStatus, error) {
+	resp, err := c.doPost(c.buildURL("/import"), request)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return NewTranslationStatusFromReader(resp.Body)
+}
+
 // closeBody ensures the Body of an http.Response is properly closed.
 func closeBody(r *http.Response) {
 	if r.Body != nil {

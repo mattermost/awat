@@ -16,6 +16,10 @@ type TranslationRequest struct {
 	Team           string
 }
 
+type ImportWorkRequest struct {
+	ProvisionerID string
+}
+
 type TranslationMetadata struct {
 	Options interface{}
 }
@@ -25,6 +29,8 @@ type TranslationStatus struct {
 
 	State string
 }
+
+// TODO replace all these functions with a generic one after generics ship :D
 
 func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, error) {
 	var request TranslationRequest
@@ -51,4 +57,13 @@ func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus,
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
 	return status, nil
+}
+
+func NewImportWorkRequestFromReader(reader io.Reader) (*ImportWorkRequest, error) {
+	var request ImportWorkRequest
+	err := json.NewDecoder(reader).Decode(&request)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode translation start request")
+	}
+	return &request, nil
 }

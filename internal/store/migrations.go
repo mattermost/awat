@@ -34,15 +34,18 @@ var migrations = []migration{
 
 			_, err = e.Exec(`
 				CREATE TABLE Translation (
-						ID              TEXT PRIMARY KEY,
-						InstallationID  TEXT,
-						Type            TEXT,
-						Resource        TEXT,
-						Error           TEXT,
-						StartAt         BigInt,
-						CompleteAt      BigInt,
-						Team            TEXT,
-						LockedBy        TEXT
+						ID                TEXT PRIMARY KEY,
+						InstallationID    TEXT,
+						Type              TEXT,
+						Resource          TEXT,
+						Output            TEXT,
+						Error             TEXT,
+						StartAt           BigInt,
+						CompleteAt        BigInt,
+						ImportCompleteAt  BigInt,
+						ImportStartAt     BigInt,
+						Team              TEXT,
+						LockedBy          TEXT
 				);
 		`)
 
