@@ -202,6 +202,9 @@ func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
 	if err != nil {
 		return nil
 	}
+
+	outputNameSplitPath := strings.Split(output, "/")
+	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
 	_, err = uploader.Upload(
 		&s3manager.UploadInput{
 			Bucket: &bucket,
