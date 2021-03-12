@@ -58,6 +58,15 @@ func (s *Supervisor) supervise() {
 			s.logger.WithError(err).Error("failed to create translator for Translation %s", translation.ID)
 			continue
 		}
+
+		// TODO XXX expose the Pod name as an env var and use it as the second argument here
+		err = s.store.TryLockTranslation(translation.ID, model.NewID())
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to lock Translation %s", translation.ID)
+			continue
+		}
+		defer s.store.UnlockTranslation(translation.ID)
+
 		translation.StartAt = time.Now().UnixNano() / 1000
 		err = s.store.UpdateTranslation(translation)
 		if err != nil {
@@ -67,7 +76,6 @@ func (s *Supervisor) supervise() {
 		output, err := translator.Translate(translation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("failed to translate Translation %s", translation.ID)
-			translation.Error = err.Error()
 			err = s.store.UpdateTranslation(translation)
 			if err != nil {
 				s.logger.WithError(err).Errorf("failed to store error from failed translation")

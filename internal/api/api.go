@@ -31,7 +31,7 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	work, err := c.Store.GetTranslationReadyToImport(workRequest.ProvisionerID)
+	work, err := c.Store.GetNextReadyImport(workRequest.ProvisionerID)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to fetch translations")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -45,7 +45,7 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, translationStatusFromTranslation(work))
+	outputJSON(c, w, work)
 }
 
 func handleGetAllTranslations(c *Context, w http.ResponseWriter, r *http.Request) {

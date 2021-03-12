@@ -42,11 +42,22 @@ var migrations = []migration{
 						Error             TEXT,
 						StartAt           BigInt,
 						CompleteAt        BigInt,
-						ImportCompleteAt  BigInt,
-						ImportStartAt     BigInt,
 						Team              TEXT,
 						LockedBy          TEXT
 				);
+
+				CREATE TABLE Import (
+						ID TEXT PRIMARY KEY,
+						CompleteAt TEXT,
+						StartAt BigInt,
+						LockedBy TEXT,
+            TranslationID TEXT
+				);
+
+        ALTER TABLE Import 
+						ADD CONSTRAINT fk_TranslationID
+		        FOREIGN KEY (TranslationID) REFERENCES Translation(ID)
+				;
 		`)
 
 			return err
