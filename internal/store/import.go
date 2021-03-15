@@ -71,35 +71,31 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 	return err
 }
 
-func (sqlStore *SQLStore) TryLockImport(importID string, owner string) error {
-	_, err := sqlStore.execBuilder(
+func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
+	sqlStore.logger.Infof("locking %s as %s", imp.ID, owner)
+	imp.LockedBy = owner
+
+	result, err := sqlStore.execBuilder(
 		sqlStore.db, sq.
 			Update(ImportTableName).
-			SetMap(map[string]interface{}{
-				"LockedBy": owner,
-			}).
-			Where("ID = ?", importID).
+			SetMap(map[string]interface{}{"LockedBy": owner}).
+			Where("ID = ?", imp.ID).
 			Where("LockedBy = ?", ""),
 	)
-
 	if err != nil {
-		return errors.Wrapf(err, "failed to lock Import %s", importID)
+		return errors.Wrapf(err, "failed to lock Import %s", imp.ID)
+	}
+	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
+		return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", imp.ID)
 	}
 	return nil
 }
 
-func (sqlStore *SQLStore) UnlockImport(importID string) error {
-	_, err := sqlStore.execBuilder(
-		sqlStore.db, sq.
-			Update(ImportTableName).
-			SetMap(map[string]interface{}{
-				"LockedBy": "",
-			}).
-			Where("ID = ?", importID),
-	)
-
+func (sqlStore *SQLStore) UnlockImport(imp *model.Import) error {
+	imp.LockedBy = ""
+	err := sqlStore.UpdateImport(imp)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unlock Import %s", importID)
+		return errors.Wrapf(err, "failed to unlock Import %s", imp.ID)
 	}
 	return nil
 }
