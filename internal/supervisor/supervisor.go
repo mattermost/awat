@@ -5,9 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/mattermost/awat/internal/model"
 	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/translator"
-	"github.com/mattermost/mattermost-cloud/model"
 )
 
 type Supervisor struct {
@@ -48,6 +48,14 @@ func (s *Supervisor) supervise() {
 	}
 	for _, translation := range work {
 		s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
+		// TODO XXX expose the Pod name as an env var and use it as the second argument here
+		err = s.store.TryLockTranslation(translation, model.NewID())
+		if err != nil {
+			s.logger.WithError(err).Warnf("failed to lock Translation %s", translation.ID)
+			continue
+		}
+		defer s.store.UnlockTranslation(translation)
+
 		translator, err := translator.NewTranslator(
 			&translator.TranslatorOptions{
 				ArchiveType: translation.Type,
@@ -59,15 +67,7 @@ func (s *Supervisor) supervise() {
 			continue
 		}
 
-		// TODO XXX expose the Pod name as an env var and use it as the second argument here
-		err = s.store.TryLockTranslation(translation.ID, model.NewID())
-		if err != nil {
-			s.logger.WithError(err).Warnf("failed to lock Translation %s", translation.ID)
-			continue
-		}
-		defer s.store.UnlockTranslation(translation.ID)
-
-		translation.StartAt = time.Now().UnixNano() / 1000
+		translation.StartAt = model.Timestamp()
 		err = s.store.UpdateTranslation(translation)
 		if err != nil {
 			s.logger.WithError(err).Errorf("failed to mark Translation %s as started; will not claim or begin translation process at this time", translation.ID)
@@ -83,7 +83,7 @@ func (s *Supervisor) supervise() {
 			continue
 		}
 
-		translation.CompleteAt = time.Now().UnixNano() / 1000
+		translation.CompleteAt = model.Timestamp()
 		translation.Output = output
 		err = s.store.UpdateTranslation(translation)
 		if err != nil {

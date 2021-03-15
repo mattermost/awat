@@ -2,7 +2,6 @@ package store
 
 import (
 	"database/sql"
-	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/awat/internal/model"
@@ -100,7 +99,7 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 		Insert(TranslationTableName).
 		SetMap(map[string]interface{}{
 			"CompleteAt": translation.CompleteAt,
-			"CreateAt":   time.Now().Unix() / 1000,
+			"CreateAt":   model.Timestamp(),
 			"StartAt":    translation.StartAt,
 
 			"ID":             translation.ID,
@@ -120,6 +119,7 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 		Update(TranslationTableName).
 		SetMap(map[string]interface{}{
 			"CompleteAt": translation.CompleteAt,
+			"CreateAt":   translation.CreateAt,
 			"StartAt":    translation.StartAt,
 
 			"ID":             translation.ID,
@@ -134,29 +134,31 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 	return err
 }
 
-func (sqlStore *SQLStore) TryLockTranslation(translationID string, owner string) error {
-	_, err := sqlStore.execBuilder(
+func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, owner string) error {
+	sqlStore.logger.Infof("locking %s as %s", translation.ID, owner)
+	translation.LockedBy = owner
+
+	result, err := sqlStore.execBuilder(
 		sqlStore.db, sq.
 			Update(TranslationTableName).
-			SetMap(map[string]interface{}{
-				"LockedBy": owner,
-			}).
-			Where("ID = ?", translationID).
+			SetMap(map[string]interface{}{"LockedBy": owner}).
+			Where("ID = ?", translation.ID).
 			Where("LockedBy = ?", ""),
 	)
-
-	return errors.Wrapf(err, "failed to lock Translation %s", translationID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock Translation %s", translation.ID)
+	}
+	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
+		return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", translation.ID)
+	}
+	return nil
 }
 
-func (sqlStore *SQLStore) UnlockTranslation(translationID string) error {
-	_, err := sqlStore.execBuilder(
-		sqlStore.db, sq.
-			Update(TranslationTableName).
-			SetMap(map[string]interface{}{
-				"LockedBy": "",
-			}).
-			Where("ID = ?", translationID),
-	)
-
-	return errors.Wrapf(err, "failed to unlock Translation %s", translationID)
+func (sqlStore *SQLStore) UnlockTranslation(translation *model.Translation) error {
+	translation.LockedBy = ""
+	err := sqlStore.UpdateTranslation(translation)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unlock Translation %s", translation.ID)
+	}
+	return nil
 }

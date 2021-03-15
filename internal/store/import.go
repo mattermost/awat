@@ -1,8 +1,6 @@
 package store
 
 import (
-	"time"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/mattermost/awat/internal/model"
 	"github.com/pkg/errors"
@@ -47,7 +45,7 @@ func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(ImportTableName).
 		SetMap(map[string]interface{}{
-			"CreateAt":      time.Now().Unix() / 1000,
+			"CreateAt":      model.Timestamp(),
 			"CompleteAt":    imp.CompleteAt,
 			"ID":            imp.ID,
 			"LockedBy":      imp.LockedBy,
@@ -61,6 +59,7 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(ImportTableName).
 		SetMap(map[string]interface{}{
+			"CreateAt":      imp.CreateAt,
 			"CompleteAt":    imp.CompleteAt,
 			"ID":            imp.ID,
 			"LockedBy":      imp.LockedBy,
@@ -83,7 +82,10 @@ func (sqlStore *SQLStore) TryLockImport(importID string, owner string) error {
 			Where("LockedBy = ?", ""),
 	)
 
-	return errors.Wrapf(err, "failed to lock Import %s", importID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock Import %s", importID)
+	}
+	return nil
 }
 
 func (sqlStore *SQLStore) UnlockImport(importID string) error {
@@ -96,5 +98,8 @@ func (sqlStore *SQLStore) UnlockImport(importID string) error {
 			Where("ID = ?", importID),
 	)
 
-	return errors.Wrapf(err, "failed to unlock Import %s", importID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unlock Import %s", importID)
+	}
+	return nil
 }

@@ -1,9 +1,5 @@
 package model
 
-import (
-	cloudModel "github.com/mattermost/mattermost-cloud/model"
-)
-
 const (
 	TranslationStateRequested  = "translation-requested"
 	TranslationStateInProgress = "translation-in-progress"
@@ -37,7 +33,7 @@ func (t *Translation) State() string {
 
 func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translation {
 	return &Translation{
-		ID:             cloudModel.NewID(),
+		ID:             NewID(),
 		InstallationID: translationRequest.InstallationID,
 		Type:           translationRequest.Type,
 		Resource:       translationRequest.Archive,
