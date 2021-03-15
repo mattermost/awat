@@ -5,9 +5,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/mattermost/awat/internal/model"
 	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/translator"
+	"github.com/mattermost/awat/model"
 )
 
 type Supervisor struct {
@@ -46,6 +46,7 @@ func (s *Supervisor) supervise() {
 	if len(work) > 0 {
 		s.logger.Debugf("Found %d requests pending to be translated", len(work))
 	}
+
 	for _, translation := range work {
 		s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
 		// TODO XXX expose the Pod name as an env var and use it as the second argument here
@@ -90,5 +91,13 @@ func (s *Supervisor) supervise() {
 			s.logger.WithError(err).Warnf("failed to store completed Translation %s; the Translation may be erroneously repeated!", translation.ID)
 			continue
 		}
+
+		imp := model.NewImport(translation.ID)
+		err = s.store.StoreImport(imp)
+		if err != nil {
+			s.logger.WithError(err).Errorf("failed to create an Import for Translation %s; the Translation may be complete but it will not be imported automatically", translation.ID)
+			continue
+		}
+
 	}
 }

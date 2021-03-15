@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mattermost/awat/internal/model"
+	"github.com/mattermost/awat/model"
 	"github.com/spf13/cobra"
 )
 

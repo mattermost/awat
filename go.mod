@@ -3,7 +3,6 @@ module github.com/mattermost/awat
 go 1.15
 
 replace (
-	github.com/grundleborg/slack-advanced-exporter => ../../grundleborg/slack-advanced-exporter
 	github.com/mattermost/mmetl => ../mmetl
 )
 

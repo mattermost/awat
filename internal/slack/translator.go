@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/mattermost/awat/internal/model"
+	"github.com/mattermost/awat/model"
 )
 
 type SlackTranslator struct {

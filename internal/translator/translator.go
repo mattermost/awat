@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/mattermost/awat/internal/model"
 	"github.com/mattermost/awat/internal/slack"
+	"github.com/mattermost/awat/model"
 )
 
 type Translator interface {

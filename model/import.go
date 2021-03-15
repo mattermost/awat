@@ -26,6 +26,25 @@ type ImportWorkRequest struct {
 	ProvisionerID string
 }
 
+func NewImport(translationID string) *Import {
+	return &Import{
+		TranslationID: translationID,
+		CreateAt:      Timestamp(),
+	}
+}
+
+func (i *Import) State() string {
+	if i.StartAt == 0 {
+		return ImportStateRequested
+	}
+
+	if i.CompleteAt == 0 {
+		return ImportStateInProgress
+	}
+
+	return ImportStateComplete
+}
+
 func NewImportWorkRequestFromReader(reader io.Reader) (*ImportWorkRequest, error) {
 	var request ImportWorkRequest
 	err := json.NewDecoder(reader).Decode(&request)

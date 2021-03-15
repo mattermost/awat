@@ -1,6 +1,6 @@
 package api
 
-import "github.com/mattermost/awat/internal/model"
+import "github.com/mattermost/awat/model"
 
 type Store interface {
 	GetTranslation(id string) (*model.Translation, error)
@@ -9,5 +9,7 @@ type Store interface {
 	StoreTranslation(t *model.Translation) error
 	UpdateTranslation(t *model.Translation) error
 
-	GetNextReadyImport(provisionerID string) (*model.Import, error)
+	GetAndClaimNextReadyImport(provisionerID string) (*model.Import, error)
+	GetAllImports() ([]*model.Import, error)
+	GetImport(id string) (*model.Import, error)
 }

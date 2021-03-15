@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/mattermost/awat/internal/model"
+	"github.com/mattermost/awat/model"
 	"github.com/pkg/errors"
 )
 
@@ -77,6 +77,9 @@ func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Tra
 	return *translations, nil
 }
 
+// GetTranslationsReadyToStart returns a batch of Translations that
+// are ready to go, with a maximum of ten, sorted from oldest to
+// newest
 func (sqlStore *SQLStore) GetTranslationsReadyToStart() ([]*model.Translation, error) {
 	translations := &[]*model.Translation{}
 	err := sqlStore.selectBuilder(sqlStore.db, translations,
@@ -149,7 +152,11 @@ func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, own
 		return errors.Wrapf(err, "failed to lock Translation %s", translation.ID)
 	}
 	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
-		return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", translation.ID)
+		if err != nil {
+			return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", translation.ID)
+		} else {
+			return errors.Errorf("wrong number of rows while trying to unlock %s", translation.ID)
+		}
 	}
 	return nil
 }
