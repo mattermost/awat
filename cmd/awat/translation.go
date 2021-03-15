@@ -23,7 +23,6 @@ func init() {
 	translationCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
 
 	getTranslationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
-	getTranslationCmd.PersistentFlags().Bool("work", false, "Fetch next translation ready to be imported. Using this option will ignore --translation-id and --installation-id flags")
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 
@@ -47,22 +46,6 @@ var getTranslationCmd = &cobra.Command{
 
 		server, _ := cmd.Flags().GetString(server)
 		awat := model.NewClient(server)
-
-		work, _ := cmd.Flags().GetBool("work")
-		if work {
-			status, err := awat.GetTranslationReadyToImport(
-				&model.ImportWorkRequest{ProvisionerID: "commandline"},
-			)
-			if err != nil {
-				return err
-			}
-			if status == nil {
-				fmt.Println("No translations ready for import")
-				return nil
-			}
-			_ = printJSON(status)
-			return nil
-		}
 
 		if (installation == "" && translation == "") ||
 			(installation != "" && translation != "") {
