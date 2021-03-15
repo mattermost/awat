@@ -42,7 +42,7 @@ func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	importStatuses := []*ImportStatus{}
+	importStatuses := []*model.ImportStatus{}
 	for _, t := range imprts {
 		importStatuses = append(importStatuses, importStatusFromImport(t))
 	}
@@ -68,14 +68,8 @@ func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, importStatusFromImport(imprt))
 }
 
-type ImportStatus struct {
-	model.Import
-
-	State string
-}
-
-func importStatusFromImport(imp *model.Import) (status *ImportStatus) {
-	return &ImportStatus{
+func importStatusFromImport(imp *model.Import) (status *model.ImportStatus) {
+	return &model.ImportStatus{
 		Import: *imp,
 		State:  imp.State(),
 	}

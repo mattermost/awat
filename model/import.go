@@ -33,6 +33,12 @@ func NewImport(translationID string) *Import {
 	}
 }
 
+type ImportStatus struct {
+	Import
+
+	State string
+}
+
 func (i *Import) State() string {
 	if i.StartAt == 0 {
 		return ImportStateRequested
@@ -61,4 +67,22 @@ func NewImportFromReader(reader io.Reader) (*Import, error) {
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
 	return &imp, nil
+}
+
+func NewImportStatusFromReader(reader io.Reader) (*ImportStatus, error) {
+	var status ImportStatus
+	err := json.NewDecoder(reader).Decode(&status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode import status")
+	}
+	return &status, nil
+}
+
+func NewImportStatusListFromReader(reader io.Reader) ([]*ImportStatus, error) {
+	var status []*ImportStatus
+	err := json.NewDecoder(reader).Decode(&status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode import status list")
+	}
+	return status, nil
 }

@@ -67,7 +67,7 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	return NewTranslationStatusListFromReader(resp.Body)
 }
 
-func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Import, error) {
+func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*ImportStatus, error) {
 	resp, err := c.doPost(c.buildURL("/import"), request)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,19 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 		return nil, nil
 	}
 
-	return NewImportFromReader(resp.Body)
+	return NewImportStatusFromReader(resp.Body)
+}
+
+func (c *Client) ListImports() ([]*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/imports"))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return NewImportStatusListFromReader(resp.Body)
 }
 
 // closeBody ensures the Body of an http.Response is properly closed.
