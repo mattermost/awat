@@ -26,6 +26,11 @@ func NewSlackTranslator(bucket, workingDir string) *SlackTranslator {
 	return &SlackTranslator{bucket: bucket, workingDir: workingDir}
 }
 
+// Translate satisfies the Translator interface for the
+// SlackTranslator. It performs the Translation represented by the
+// input struct and uploads the resulting .zip archive to S3. On
+// success it returns the file name of the output zip file without a
+// path and on error it returns the error and an empty string
 func (st *SlackTranslator) Translate(translation *model.Translation) (string, error) {
 	workdir := fmt.Sprintf("%s/%s", st.workingDir, translation.ID)
 	err := os.Mkdir(workdir, 0700)
@@ -77,6 +82,9 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	return outputShortName, nil
 }
 
+// fetchSlackArchive is responsible for downloading the input archive
+// from S3 and writing it out to workdir, which is assumed to be of
+// sufficient capacity for the archive
 func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir, resource string) (string, error) {
 
 	sess := session.Must(session.NewSession())
@@ -109,6 +117,9 @@ func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir,
 	return inputArchive.Name(), nil
 }
 
+// addFilesToSlackArchive prepares the input and fetches attached
+// files, writing the output to workdir and removing the input archive
+// when complete
 func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, workdir, attachmentDirName, inputArchiveName string) (string, error) {
 
 	logger.Infof("Downloading attached files to %s", attachmentDirName)
@@ -136,6 +147,8 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 	return withFiles.Name(), nil
 }
 
+// createOutputZip file compresses the output from the Translate
+// process into a .zip that can be injested by Mattermost
 func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attachmentDirName, mbifName, translationID string) (string, error) {
 	output, err := os.Create(fmt.Sprintf("%s/%s.zip", st.workingDir, translationID))
 	if err != nil {
@@ -195,6 +208,8 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 	return output.Name(), nil
 }
 
+// uploadTransformedZip uploads the prepared Mattermost-compatible
+// archive to S3 for future import
 func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
 	sess := session.Must(session.NewSession())
 	uploader := s3manager.NewUploader(sess)

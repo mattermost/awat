@@ -25,6 +25,7 @@ func init() {
 		From(ImportTableName)
 }
 
+// GetImport returns a single Import with identifier id
 func (sqlStore *SQLStore) GetImport(id string) (*model.Import, error) {
 	imprt := new(model.Import)
 	builder := importSelect
@@ -43,6 +44,8 @@ func (sqlStore *SQLStore) GetImport(id string) (*model.Import, error) {
 	return imprt, nil
 }
 
+// GetAllImports returns all of the Imports in the database
+// TODO pagination
 func (sqlStore *SQLStore) GetAllImports() ([]*model.Import, error) {
 	imprts := &[]*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, imprts, importSelect)
@@ -53,6 +56,11 @@ func (sqlStore *SQLStore) GetAllImports() ([]*model.Import, error) {
 	return *imprts, nil
 }
 
+// GetAndClaimNextReadyImport finds the oldest unclaimed and
+// non-started Import and locks it with the given provisionerID before
+// returning that Import
+// Returns nil with no error if no Import is available to lock
+// Returns nil, error if the Import cannot be claimed for some other reason
 func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*model.Import, error) {
 	imports := []*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, &imports,
@@ -84,6 +92,7 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 	return imprt, nil
 }
 
+// StoreImport writes the input Import to the database
 func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(ImportTableName).
@@ -98,6 +107,8 @@ func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 	)
 	return err
 }
+
+// UpdateImport writes changes to the input Import to the database
 func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(ImportTableName).
@@ -114,6 +125,8 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 	return err
 }
 
+// GetImportsByInstallation provides a convenience function for
+// looking up all Imports that belong to a given Installation
 func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, error) {
 	imports := &[]*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, imports,
@@ -132,6 +145,9 @@ func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, 
 	return *imports, nil
 }
 
+// TryLockImport attempts to lock the input Import with the given
+// owner, but will not do so if the column already contains something,
+// and will return an error instead in that case
 func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
 	sqlStore.logger.Infof("locking %s as %s", imp.ID, owner)
 	imp.LockedBy = owner
@@ -156,6 +172,7 @@ func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
 	return nil
 }
 
+// UnlockImport clears the lock for the given Import
 func (sqlStore *SQLStore) UnlockImport(imp *model.Import) error {
 	imp.LockedBy = ""
 	err := sqlStore.UpdateImport(imp)

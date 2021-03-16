@@ -8,6 +8,12 @@ import (
 	mmetl "github.com/mattermost/mmetl/services/slack"
 )
 
+// TransformSlack takes a absolute filepath inputFilePath which points
+// to a Slack workspace archive which already contains file
+// attachments and outputs an MBIF to outputFilePath with references
+// in the JSONL lines that make up the MBIF referring to any attached
+// files in attachmentsDir. The attached files will also be extracted
+// from the file at inputFilePath and stored in attachmentsDir
 func TransformSlack(inputFilePath, outputFilePath, team, attachmentsDir string) error {
 	// input file
 	fileReader, err := os.Open(inputFilePath)

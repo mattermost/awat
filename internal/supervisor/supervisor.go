@@ -10,6 +10,8 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
+// Supervisor is responsible for scheduling and launching Translations
+// in series
 type Supervisor struct {
 	logger  log.FieldLogger
 	store   *store.SQLStore
@@ -17,6 +19,8 @@ type Supervisor struct {
 	workdir string
 }
 
+// NewSupervisor returns a Supervisor prepared with the needed
+// metadata to operate
 func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdir string) *Supervisor {
 	return &Supervisor{
 		store:   store,
@@ -26,16 +30,20 @@ func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdi
 	}
 }
 
+// Start runs the Supervisor's main routine on a new goroutine both
+// periodically and forever
 func (s *Supervisor) Start() {
 	s.logger.Info("Supervisor started")
 	go func() {
 		for {
 			s.supervise()
-			time.Sleep(15 * time.Second)
+			time.Sleep(60 * time.Second)
 		}
 	}()
 }
 
+// supervise queries the database for available Translations and
+// works through the batch returned serially
 func (s *Supervisor) supervise() {
 	work, err := s.store.GetTranslationsReadyToStart()
 	if err != nil {

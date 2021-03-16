@@ -6,6 +6,8 @@ const (
 	TranslationStateComplete   = "translation-complete"
 )
 
+// Translation represents a single process of converting a foreign
+// workspace archive into a native Mattermost workspace import archive
 type Translation struct {
 	ID             string
 	InstallationID string
@@ -19,6 +21,9 @@ type Translation struct {
 	LockedBy       string
 }
 
+// State provides a container for returning the state with the
+// Translation to the client without explicitly needing to store a state
+// attribute in the database
 func (t *Translation) State() string {
 	if t.StartAt == 0 {
 		return TranslationStateRequested
@@ -31,6 +36,8 @@ func (t *Translation) State() string {
 	return TranslationStateComplete
 }
 
+// NewTranslationFromRequest creates a new Translation from a
+// TranslationRequest
 func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translation {
 	return &Translation{
 		ID:             NewID(),

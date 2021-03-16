@@ -30,6 +30,7 @@ func init() {
 		From(TranslationTableName)
 }
 
+// GetTranslation returns the Translation that corresponds to the identifier ID
 func (sqlStore *SQLStore) GetTranslation(id string) (*model.Translation, error) {
 	translation := new(model.Translation)
 	builder := translationSelect
@@ -49,6 +50,8 @@ func (sqlStore *SQLStore) GetTranslation(id string) (*model.Translation, error) 
 
 }
 
+// GetAllTranslations returns every Translation in the DB
+// TODO pagination
 func (sqlStore *SQLStore) GetAllTranslations() ([]*model.Translation, error) {
 	translations := &[]*model.Translation{}
 	err := sqlStore.selectBuilder(sqlStore.db, translations, translationSelect)
@@ -59,6 +62,9 @@ func (sqlStore *SQLStore) GetAllTranslations() ([]*model.Translation, error) {
 	return *translations, nil
 }
 
+// GetTranslationsByInstallation provides a convenience method for
+// fetching every Translation related to a given Installation by its
+// ID
 func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Translation, error) {
 	translations := &[]*model.Translation{}
 	err := sqlStore.selectBuilder(sqlStore.db, translations,
@@ -97,6 +103,8 @@ func (sqlStore *SQLStore) GetTranslationsReadyToStart() ([]*model.Translation, e
 	return *translations, nil
 }
 
+// StoreTranslation saves the specified Translation to the database,
+// assuming it is new
 func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(TranslationTableName).
@@ -117,6 +125,8 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 	return err
 }
 
+// UpdateTranslation stores changes to the input translation in the
+// database
 func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(TranslationTableName).
@@ -137,6 +147,8 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 	return err
 }
 
+// TryLockTranslation attempts to claim the given translation for the
+// owner ID provided and returns an error if it fails to do so
 func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, owner string) error {
 	sqlStore.logger.Infof("locking %s as %s", translation.ID, owner)
 	translation.LockedBy = owner
@@ -161,6 +173,7 @@ func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, own
 	return nil
 }
 
+// UnlockTranslation clears the lock on the given translation
 func (sqlStore *SQLStore) UnlockTranslation(translation *model.Translation) error {
 	translation.LockedBy = ""
 	err := sqlStore.UpdateTranslation(translation)

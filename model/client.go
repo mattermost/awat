@@ -25,6 +25,8 @@ func NewClient(address string) *Client {
 	}
 }
 
+// CreateTranslation creates a new Translation which will start
+// shortly after being created
 func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*TranslationStatus, error) {
 	resp, err := c.doPost(c.buildURL("/translate"), translationRequest)
 	if err != nil {
@@ -34,6 +36,8 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 	return NewTranslationStatusFromReader(resp.Body)
 }
 
+// GetTranslationStatus returns the TranslationStatus struct returned
+// from the API for the given Translation ID
 func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus, error) {
 	resp, err := c.doGet(c.buildURL("/translation/%s", translationId))
 	if err != nil {
@@ -43,6 +47,8 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 	return NewTranslationStatusFromReader(resp.Body)
 }
 
+// GetTranslationStatusesByInstallation returns all Translations that
+// pertain to an Installation
 func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]*TranslationStatus, error) {
 	resp, err := c.doGet(c.buildURL("/installation/translation/%s", installationId))
 	if err != nil {
@@ -55,6 +61,8 @@ func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]
 	return NewTranslationStatusListFromReader(resp.Body)
 }
 
+// GetImportStatusesByInstallation returns all Imports that
+// pertain to an Installation
 func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*ImportStatus, error) {
 	resp, err := c.doGet(c.buildURL("/installation/import/%s", installationId))
 	if err != nil {
@@ -67,6 +75,8 @@ func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*Impo
 	return NewImportStatusListFromReader(resp.Body)
 }
 
+// GetAllTranslations gets all Translations from the API and returns
+// them as a JSON list
 func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	resp, err := c.doGet(c.buildURL("/translations"))
 	if err != nil {
@@ -79,6 +89,9 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	return NewTranslationStatusListFromReader(resp.Body)
 }
 
+// GetTranslationReadyToImport gets and claims the next Import waiting
+// to be imported. The Import will be claimed for the caller specified
+// in the ProvisionerID filed of the request argument
 func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*ImportStatus, error) {
 	resp, err := c.doPost(c.buildURL("/import"), request)
 	if err != nil {
@@ -91,6 +104,8 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 	return NewImportStatusFromReader(resp.Body)
 }
 
+// GetImportStatus returns the status of a single import specified by
+// ID
 func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
 	resp, err := c.doGet(c.buildURL("/import/%s", importID))
 	if err != nil {
@@ -100,6 +115,8 @@ func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
 	return NewImportStatusFromReader(resp.Body)
 }
 
+// ListImports returns all Imports on the AWAT
+// TODO pagination
 func (c *Client) ListImports() ([]*ImportStatus, error) {
 	resp, err := c.doGet(c.buildURL("/imports"))
 	if err != nil {
