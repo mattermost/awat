@@ -17,7 +17,7 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	work, err := c.Store.GetAndClaimNextReadyImport(workRequest.ProvisionerID)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to fetch imports")
+		c.Logger.WithError(err).Error("failed to fetch import")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -73,10 +73,13 @@ func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r 
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	if len(imports) == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
 	outputJSON(c, w, importStatusListFromImports(imports))
 }
 

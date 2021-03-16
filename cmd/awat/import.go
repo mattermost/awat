@@ -11,6 +11,8 @@ import (
 const importID = "import-id"
 
 func init() {
+	importCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
+
 	getImportCmd.PersistentFlags().String(importID, "", "ID of the Import to operate on")
 	getImportCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with an import")
 

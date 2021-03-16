@@ -54,8 +54,8 @@ func (sqlStore *SQLStore) GetAllImports() ([]*model.Import, error) {
 }
 
 func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*model.Import, error) {
-	imprt := &model.Import{}
-	err := sqlStore.selectBuilder(sqlStore.db, imprt,
+	imports := []*model.Import{}
+	err := sqlStore.selectBuilder(sqlStore.db, &imports,
 		importSelect.
 			Where("StartAt = 0").
 			Where("LockedBy = ''").
@@ -63,18 +63,22 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 			Limit(1),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to run query to get Imports ready to run")
 	}
+	if len(imports) < 1 {
+		return nil, nil
+	}
+	imprt := imports[0]
 
 	err = sqlStore.TryLockImport(imprt, provisionerID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to lock Import %s", imprt.ID)
 	}
 
 	imprt.StartAt = model.Timestamp()
 	err = sqlStore.UpdateImport(imprt)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to mark Import %s as started", imprt.ID)
 	}
 
 	return imprt, nil

@@ -28,6 +28,7 @@ type ImportWorkRequest struct {
 
 func NewImport(translationID string) *Import {
 	return &Import{
+		ID:            NewID(),
 		TranslationID: translationID,
 		CreateAt:      Timestamp(),
 	}
