@@ -31,6 +31,7 @@ type contextHandler struct {
 	handler contextHandlerFunc
 }
 
+// ServeHTTP satisfies the Handler interface for contextHandler
 func (h contextHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	context := h.context.Clone()
 	context.RequestID = cloudModel.NewID()

@@ -7,6 +7,10 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
+// handleStartImport handles POST requests sent to /import This
+// endpoint takes an ID, locks the oldest Import awaiting work with
+// that ID, and returns the metadata associated with that Import in
+// order for a Provisioner to being work on it
 func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	workRequest, err := model.NewImportWorkRequestFromReader(r.Body)
 	if err != nil {
@@ -32,6 +36,9 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, importStatusFromImport(work))
 }
 
+// handleListImports responds to GET /imports and returns all Imports
+// in the database
+// TODO add pagination to this endpoint
 func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 	imports, err := c.Store.GetAllImports()
 	if err != nil {
@@ -49,6 +56,7 @@ func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, importStatusListFromImports(imports))
 }
 
+// handleGetImport responds to GET /import/{id} with one Import
 func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	importID := vars["id"]
@@ -68,6 +76,8 @@ func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, importStatusFromImport(imprt))
 }
 
+// handleGetImportStatusesByInstallation allows easily looking up all
+// Imports related to an Installation by the Installation ID
 func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]

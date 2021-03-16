@@ -13,8 +13,12 @@ import (
 	"strings"
 )
 
+// FetchAttachedFiles takes the Slack input file at absolute path
+// inputArchive and parses it. Upon discovering references to attached
+// files, those files are fetched from Slack's servers and added to
+// outputArchive, which at the end will contain all of the data from
+// inputArchive as well as all attached files
 func FetchAttachedFiles(inputArchive string, outputArchive string) error {
-
 	// Check the parameters.
 	if len(inputArchive) == 0 {
 		return fmt.Errorf("fetch-attachments command requires --input-archive to be specified.\n")
@@ -89,8 +93,9 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 	return nil
 }
 
+// processChannelFile actually fetches and adds a found file to the
+// archive specified at file
 func processChannelFile(w *zip.Writer, file *zip.File, inBuf []byte) error {
-
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
@@ -164,6 +169,7 @@ func processChannelFile(w *zip.Writer, file *zip.File, inBuf []byte) error {
 	return nil
 }
 
+// SlackFile is a holding type for files attached to Slack messages
 type SlackFile struct {
 	Id                 string `json:"id"`
 	Name               string `json:"name"`
@@ -171,6 +177,7 @@ type SlackFile struct {
 	UrlPrivateDownload string `json:"url_private_download"`
 }
 
+// SlackPost is a holding type for Slack posts
 type SlackPost struct {
 	User    string       `json:"user"`
 	Type    string       `json:"type"`
@@ -181,13 +188,16 @@ type SlackPost struct {
 	Files   []*SlackFile `json:"files"`
 }
 
-// As it appears in users.json and /api/users.list.
-// There're obviously many more fields, but we only need a couple of them.
+// SlackUser is a holding type for Users in the Slack representation
+// As it appears in users.json and /api/users.list.  There're
+// obviously many more fields, but we only need a couple of them.
 type SlackUser struct {
 	Id      string           `json:"id"`
 	Profile SlackUserProfile `json:"profile"`
 }
 
+// SlackUserProfile is a holding type for extracting users' emails out
+// of a Slack export archive
 type SlackUserProfile struct {
 	Email string `json:"email"`
 }
