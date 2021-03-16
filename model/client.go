@@ -44,7 +44,7 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 }
 
 func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]*TranslationStatus, error) {
-	resp, err := c.doGet(c.buildURL("/installation/%s", installationId))
+	resp, err := c.doGet(c.buildURL("/installation/translation/%s", installationId))
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +53,18 @@ func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]
 	}
 
 	return NewTranslationStatusListFromReader(resp.Body)
+}
+
+func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/installation/import/%s", installationId))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return NewImportStatusListFromReader(resp.Body)
 }
 
 func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
@@ -74,6 +86,15 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, nil
+	}
+
+	return NewImportStatusFromReader(resp.Body)
+}
+
+func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/import/%s", importID))
+	if err != nil {
+		return nil, err
 	}
 
 	return NewImportStatusFromReader(resp.Body)

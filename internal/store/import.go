@@ -110,6 +110,24 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 	return err
 }
 
+func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, error) {
+	imports := &[]*model.Import{}
+	err := sqlStore.selectBuilder(sqlStore.db, imports,
+		importSelect.
+			Where("InstallationID = ?", id),
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return *imports, nil
+}
+
 func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
 	sqlStore.logger.Infof("locking %s as %s", imp.ID, owner)
 	imp.LockedBy = owner

@@ -17,7 +17,7 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	work, err := c.Store.GetAndClaimNextReadyImport(workRequest.ProvisionerID)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to fetch translations")
+		c.Logger.WithError(err).Error("failed to fetch imports")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -33,7 +33,7 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
-	imprts, err := c.Store.GetAllImports()
+	imports, err := c.Store.GetAllImports()
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to fetch imports")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -42,11 +42,7 @@ func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	importStatuses := []*model.ImportStatus{}
-	for _, t := range imprts {
-		importStatuses = append(importStatuses, importStatusFromImport(t))
-	}
-	outputJSON(c, w, importStatuses)
+	outputJSON(c, w, importStatusListFromImports(imports))
 }
 
 func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -54,7 +50,7 @@ func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	importID := vars["id"]
 	imprt, err := c.Store.GetImport(importID)
 	if err != nil {
-		c.Logger.WithError(err).Errorf("failed to fetch transaction with ID %s", importID)
+		c.Logger.WithError(err).Errorf("failed to fetch import with ID %s", importID)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -68,9 +64,32 @@ func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, importStatusFromImport(imprt))
 }
 
+func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	imports, err := c.Store.GetImportsByInstallation(id)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to fetch imports")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	outputJSON(c, w, importStatusListFromImports(imports))
+}
+
 func importStatusFromImport(imp *model.Import) (status *model.ImportStatus) {
 	return &model.ImportStatus{
 		Import: *imp,
 		State:  imp.State(),
 	}
+}
+
+func importStatusListFromImports(imports []*model.Import) (statuses []*model.ImportStatus) {
+	for _, t := range imports {
+		statuses = append(statuses, importStatusFromImport(t))
+	}
+	return
 }

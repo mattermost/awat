@@ -22,6 +22,7 @@ func init() {
 
 	rootCmd.AddCommand(serverCmd)
 	rootCmd.AddCommand(translationCmd)
+	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(schemaCmd)
 }
 

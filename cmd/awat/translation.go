@@ -25,12 +25,20 @@ func init() {
 	getTranslationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
-
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
 	translationCmd.AddCommand(startTranslationCmd)
+}
+
+var translationCmd = &cobra.Command{
+	Use:   "translation",
+	Short: "Control translations on the AWAT",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
 }
 
 var getTranslationCmd = &cobra.Command{
@@ -49,7 +57,7 @@ var getTranslationCmd = &cobra.Command{
 
 		if (installation == "" && translation == "") ||
 			(installation != "" && translation != "") {
-			return errors.New("one and only one of translation-id or installation-id must be specified unless --work is specified")
+			return errors.New("one and only one of translation-id or installation-id must be specified")
 		}
 
 		if installation != "" {
@@ -81,7 +89,6 @@ var listTranslationCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all translations from the AWAT",
 	RunE: func(cmd *cobra.Command, args []string) error {
-
 		server, _ := cmd.Flags().GetString(server)
 		awat := model.NewClient(server)
 
@@ -138,15 +145,6 @@ var startTranslationCmd = &cobra.Command{
 		}
 
 		return err
-	},
-}
-
-var translationCmd = &cobra.Command{
-	Use:   "translation",
-	Short: "Control translations on the AWAT",
-	Args:  cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return nil
 	},
 }
 

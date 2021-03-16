@@ -19,11 +19,7 @@ func handleListTranslations(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	translationStatuses := []*model.TranslationStatus{}
-	for _, t := range translations {
-		translationStatuses = append(translationStatuses, translationStatusFromTranslation(t))
-	}
-	outputJSON(c, w, translationStatuses)
+	outputJSON(c, w, translationStatusListFromTranslations(translations))
 }
 
 func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -79,7 +75,8 @@ func handleGetTranslationStatusesByInstallation(c *Context, w http.ResponseWrite
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, translations)
+
+	outputJSON(c, w, translationStatusListFromTranslations(translations))
 }
 
 // outputJSON is a helper method to write the given data as JSON to the given writer.
@@ -99,4 +96,11 @@ func translationStatusFromTranslation(t *model.Translation) (status *model.Trans
 		State:       t.State(),
 		Translation: *t,
 	}
+}
+
+func translationStatusListFromTranslations(translations []*model.Translation) (translationStatusList []*model.TranslationStatus) {
+	for _, t := range translations {
+		translationStatusList = append(translationStatusList, translationStatusFromTranslation(t))
+	}
+	return
 }
