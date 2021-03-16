@@ -13,6 +13,9 @@ const importID = "import-id"
 func init() {
 	getImportCmd.PersistentFlags().String(importID, "", "ID of the Import to operate on")
 	getImportCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with an import")
+
+	importCmd.AddCommand(getImportCmd)
+	importCmd.AddCommand(listImportCmd)
 }
 
 var importCmd = &cobra.Command{
