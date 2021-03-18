@@ -34,6 +34,7 @@ var getImportCmd = &cobra.Command{
 	Short: "Fetch an import by ID from the AWAT to get its status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		imprt, _ := cmd.Flags().GetString(importID)
+		server, _ := cmd.Flags().GetString(serverFlag)
 		_ = model.NewClient(server)
 
 		installation, _ := cmd.Flags().GetString(installationId)
@@ -45,8 +46,8 @@ var getImportCmd = &cobra.Command{
 			status, err := awat.GetImportStatusesByInstallation(installation)
 			if len(status) > 0 {
 				_ = printJSON(status)
-				return err
 			}
+			return err
 		} else {
 			status, err := awat.GetImportStatus(imprt)
 			if err != nil {
@@ -70,7 +71,7 @@ var listImportCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List multiple imports from the AWAT",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		server, _ := cmd.Flags().GetString(server)
+		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
 		var err error

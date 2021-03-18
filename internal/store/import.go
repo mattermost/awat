@@ -130,8 +130,10 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, error) {
 	imports := &[]*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, imports,
-		importSelect.
-			Where("InstallationID = ?", id),
+		sq.Select("import.*").
+			From("import").
+			Join("translation ON import.translationid = translation.id").
+			Where("translation.installationid = ?", id),
 	)
 
 	if err == sql.ErrNoRows {

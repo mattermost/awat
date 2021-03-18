@@ -13,7 +13,6 @@ import (
 const (
 	translationId   = "translation-id"
 	installationId  = "installation-id"
-	serverFlag      = "server"
 	archiveFilename = "filename"
 	teamFlag        = "team"
 )
@@ -47,12 +46,9 @@ var getTranslationCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		installation, _ := cmd.Flags().GetString(installationId)
-		_ = model.NewClient(server)
-
 		translation, _ := cmd.Flags().GetString(translationId)
-		_ = model.NewClient(server)
 
-		server, _ := cmd.Flags().GetString(server)
+		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
 		if (installation == "" && translation == "") ||
@@ -89,7 +85,7 @@ var listTranslationCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all translations from the AWAT",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		server, _ := cmd.Flags().GetString(server)
+		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
 		var err error
@@ -114,7 +110,7 @@ var startTranslationCmd = &cobra.Command{
 	Short: "Start a translation",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		server, _ := cmd.Flags().GetString(server)
+		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
 		installation, _ := cmd.Flags().GetString(installationId)

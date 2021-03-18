@@ -24,7 +24,7 @@ const (
 	listenFlag       = "listen"
 	bucketFlag       = "bucket"
 	workingDirectory = "workdir"
-	server           = "server"
+	serverFlag       = "server"
 )
 
 func init() {
