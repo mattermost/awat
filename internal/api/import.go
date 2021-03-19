@@ -46,10 +46,6 @@ func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if len(imports) < 1 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
