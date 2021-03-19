@@ -14,7 +14,7 @@ func init() {
 	importCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
 
 	getImportCmd.PersistentFlags().String(importID, "", "ID of the Import to operate on")
-	getImportCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with an import")
+	getImportCmd.PersistentFlags().String(installationID, "", "ID of the installation associated with an import")
 
 	importCmd.AddCommand(getImportCmd)
 	importCmd.AddCommand(listImportCmd)
@@ -37,7 +37,7 @@ var getImportCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(serverFlag)
 		_ = model.NewClient(server)
 
-		installation, _ := cmd.Flags().GetString(installationId)
+		installation, _ := cmd.Flags().GetString(installationID)
 		awat := model.NewClient(server)
 		if (installation == "" && imprt == "") || (installation != "" && imprt != "") {
 			return errors.New("one and only one of translation-id or import-id must be specified")

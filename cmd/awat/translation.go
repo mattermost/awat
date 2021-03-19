@@ -12,13 +12,13 @@ import (
 
 const (
 	translationId   = "translation-id"
-	installationId  = "installation-id"
+	installationID  = "installation-id"
 	archiveFilename = "filename"
 	teamFlag        = "team"
 )
 
 func init() {
-	translationCmd.PersistentFlags().String(installationId, "", "ID of the installation associated with a translation")
+	translationCmd.PersistentFlags().String(installationID, "", "ID of the installation associated with a translation")
 	translationCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
 
 	getTranslationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
@@ -45,7 +45,7 @@ var getTranslationCmd = &cobra.Command{
 	Short: "Fetch a translation from the AWAT to get its status",
 	RunE: func(cmd *cobra.Command, args []string) error {
 
-		installation, _ := cmd.Flags().GetString(installationId)
+		installation, _ := cmd.Flags().GetString(installationID)
 		translation, _ := cmd.Flags().GetString(translationId)
 
 		server, _ := cmd.Flags().GetString(serverFlag)
@@ -113,7 +113,7 @@ var startTranslationCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
-		installation, _ := cmd.Flags().GetString(installationId)
+		installation, _ := cmd.Flags().GetString(installationID)
 		if installation == "" {
 			return errors.New("the installation ID to which this translation pertains must be specified")
 		}
