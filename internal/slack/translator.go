@@ -121,6 +121,12 @@ func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir,
 // files, writing the output to workdir and removing the input archive
 // when complete
 func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, workdir, attachmentDirName, inputArchiveName string) (string, error) {
+	defer func() {
+		err := os.Remove(inputArchiveName)
+		if err != nil {
+			logger.Errorf("failed to remove file %s", inputArchiveName)
+		}
+	}()
 
 	logger.Infof("Downloading attached files to %s", attachmentDirName)
 
@@ -132,11 +138,6 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 	err = FetchAttachedFiles(inputArchiveName, withFiles.Name())
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch attached files")
-	}
-
-	err = os.Remove(inputArchiveName)
-	if err != nil {
-		logger.Errorf("failed to remove file %s", inputArchiveName)
 	}
 
 	err = os.Mkdir(attachmentDirName, 0700)
