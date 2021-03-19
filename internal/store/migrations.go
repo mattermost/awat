@@ -56,9 +56,9 @@ var migrations = []migration{
 						TranslationID  TEXT
 				);
 
-        ALTER TABLE Import 
+				ALTER TABLE Import 
 						ADD CONSTRAINT fk_TranslationID
-		        FOREIGN KEY (TranslationID) REFERENCES Translation(ID)
+						FOREIGN KEY (TranslationID) REFERENCES Translation(ID)
 				;
 		`)
 
