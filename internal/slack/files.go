@@ -76,7 +76,7 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 		splits := strings.Split(file.Name, "/")
 		if len(splits) == 2 && !strings.HasPrefix(splits[0], "__") && strings.HasSuffix(splits[1], ".json") {
 			// Parse this file.
-			err = processChannelFile(w, file, inBuf)
+			err = processChannelFile(w, file.Name, inBuf)
 			if err != nil {
 				fmt.Printf("%s", err)
 				continue
@@ -95,11 +95,11 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 
 // processChannelFile actually fetches and adds a found file to the
 // archive specified at file
-func processChannelFile(w *zip.Writer, file *zip.File, inBuf []byte) error {
+func processChannelFile(w *zip.Writer, fileName string, inBuf []byte) error {
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
-		return errors.New("Couldn't parse the JSON file: " + file.Name + "\n\n" + err.Error() + "\n")
+		return errors.New("Couldn't parse the JSON file: " + fileName + "\n\n" + err.Error() + "\n")
 	}
 
 	// Loop through all the posts.
