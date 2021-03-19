@@ -1,12 +1,11 @@
 # Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
 # See LICENSE.txt for license information.
 ARG DOCKER_BUILD_IMAGE=golang:1.15
-ARG DOCKER_BASE_IMAGE=ubuntu:20.04
+ARG DOCKER_BASE_IMAGE=alpine:3.12
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
 WORKDIR /awat/
 COPY . /awat/
-RUN make get-slack-advanced-exporter
 RUN make build
 
 FROM ${DOCKER_BASE_IMAGE}
@@ -23,7 +22,6 @@ ENV USER_UID=10001 \
     USER_NAME=awat
 
 COPY --from=build /awat/build/_output/bin/awat /usr/local/bin/awat
-COPY --from=build /awat/build/bin/slack-advanced-exporter-linux-amd64 /usr/local/bin/slack-advanced-exporter
 
 USER ${USER_UID}
 
