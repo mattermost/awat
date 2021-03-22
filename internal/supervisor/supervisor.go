@@ -54,9 +54,12 @@ func (s *Supervisor) supervise() error {
 		return errors.Wrap(err, "Failed to query database for pending translations")
 	}
 
-	if translation != nil {
-		s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
+	if translation == nil {
+		// no work found so just return
+		return nil
 	}
+
+	s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
 
 	// TODO XXX expose the Pod name as an env var and use it as the second argument here
 	err = s.store.TryLockTranslation(translation, model.NewID())
