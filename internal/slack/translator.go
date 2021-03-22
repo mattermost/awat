@@ -135,7 +135,7 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 		return "", errors.Wrap(err, "failed to open temp file to convert input archive to")
 	}
 
-	err = FetchAttachedFiles(inputArchiveName, withFiles.Name())
+	err = FetchAttachedFiles(logger, inputArchiveName, withFiles.Name())
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch attached files")
 	}

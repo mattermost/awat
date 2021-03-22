@@ -3,14 +3,15 @@ package slack
 import (
 	"archive/zip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 // FetchAttachedFiles takes the Slack input file at absolute path
@@ -18,15 +19,7 @@ import (
 // files, those files are fetched from Slack's servers and added to
 // outputArchive, which at the end will contain all of the data from
 // inputArchive as well as all attached files
-func FetchAttachedFiles(inputArchive string, outputArchive string) error {
-	// Check the parameters.
-	if len(inputArchive) == 0 {
-		return fmt.Errorf("fetch-attachments command requires --input-archive to be specified.\n")
-	}
-	if len(outputArchive) == 0 {
-		return fmt.Errorf("fetch-attachments command requires --output-archive to be specified.\n")
-	}
-
+func FetchAttachedFiles(logger logrus.FieldLogger, inputArchive string, outputArchive string) error {
 	// Open the input archive.
 	r, err := zip.OpenReader(inputArchive)
 	if err != nil {
@@ -50,25 +43,25 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 		// Open the file from the input archive.
 		inReader, err := file.Open()
 		if err != nil {
-			fmt.Printf("Failed to open file in input archive: %s\n\n%s", file.Name, err)
+			logger.WithError(err).Errorf("failed to open file in input archive: %s", file.Name)
 			continue
 		}
 
 		// Read the file into a byte array.
 		inBuf, err := ioutil.ReadAll(inReader)
 		if err != nil {
-			fmt.Printf("Failed to read file in input archive: %s\n\n%s", file.Name, err)
+			logger.WithError(err).Errorf("Failed to read file in input archive: %s\n\n%s", file.Name, err)
 			continue
 		}
 
 		// Now write this file to the output archive.
 		outFile, err := w.Create(file.Name)
 		if err != nil {
-			return fmt.Errorf("Failed to create file in output archive: %s\n\n%s", file.Name, err)
+			return errors.Wrapf(err, "failed to create file in output archive: %s", file.Name)
 		}
 		_, err = outFile.Write(inBuf)
 		if err != nil {
-			fmt.Printf("Failed to write file in output archive: %s\n\n%s", file.Name, err)
+			logger.WithError(err).Errorf("failed to write file in output archive: %s", file.Name)
 			continue
 		}
 
@@ -76,9 +69,9 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 		splits := strings.Split(file.Name, "/")
 		if len(splits) == 2 && !strings.HasPrefix(splits[0], "__") && strings.HasSuffix(splits[1], ".json") {
 			// Parse this file.
-			err = processChannelFile(w, file.Name, inBuf)
+			err = processChannelFile(logger, w, file.Name, inBuf)
 			if err != nil {
-				fmt.Printf("%s", err)
+				logger.WithError(err).Errorf("failed to process file %s", file.Name)
 				continue
 			}
 		}
@@ -87,7 +80,7 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 	// Close the output zip writer.
 	err = w.Close()
 	if err != nil {
-		fmt.Printf("Failed to close the output archive.\n\n%s", err)
+		logger.WithError(err).Warnf("failed to close the output archive %s", outputArchive)
 	}
 
 	return nil
@@ -95,11 +88,11 @@ func FetchAttachedFiles(inputArchive string, outputArchive string) error {
 
 // processChannelFile actually fetches and adds a found file to the
 // archive specified at file
-func processChannelFile(w *zip.Writer, fileName string, inBuf []byte) error {
+func processChannelFile(logger logrus.FieldLogger, w *zip.Writer, fileName string, inBuf []byte) error {
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
-		return errors.New("Couldn't parse the JSON file: " + fileName + "\n\n" + err.Error() + "\n")
+		return errors.Wrapf(err, "failed to parse the JSON file: %s", fileName)
 	}
 
 	// Loop through all the posts.
@@ -108,7 +101,7 @@ func processChannelFile(w *zip.Writer, fileName string, inBuf []byte) error {
 		if post.Subtype == "file_share" {
 			// Check there's a File property.
 			if post.File == nil {
-				log.Print("file_share post has no File property: " + post.Ts + "\n")
+				logger.Warnf("file_share post has no File property: %s", post.Ts)
 				continue
 			}
 
@@ -123,49 +116,51 @@ func processChannelFile(w *zip.Writer, fileName string, inBuf []byte) error {
 
 		// Loop through all the files.
 		for _, file := range post.Files {
-			// Check there's an Id, Name and either UrlPrivateDownload or UrlPrivate property.
-			if len(file.Id) < 1 || len(file.Name) < 1 || !(len(file.UrlPrivate) > 0 || len(file.UrlPrivateDownload) > 0) {
-				log.Print("file_share post has missing properties on it's File object: " + post.Ts + "\n")
-				continue
-			}
-
-			// Figure out the download URL to use.
-			var downloadUrl string
-			if len(file.UrlPrivateDownload) > 0 {
-				downloadUrl = file.UrlPrivateDownload
-			} else {
-				downloadUrl = file.UrlPrivate
-			}
-
-			// Build the output file path.
-			outputPath := "__uploads/" + file.Id + "/" + file.Name
-
-			// Create the file in the zip output file.
-			outFile, err := w.Create(outputPath)
-			if err != nil {
-				log.Print("Failed to create output file in output archive: " + outputPath + "\n\n" + err.Error() + "\n")
-				continue
-			}
-
-			// Fetch the file.
-			response, err := http.Get(downloadUrl)
-			if err != nil {
-				log.Print("Failed to download the file: " + downloadUrl)
-				continue
-			}
-			defer response.Body.Close()
-
-			// Save the file to the output zip file.
-			_, err = io.Copy(outFile, response.Body)
-			if err != nil {
-				log.Print("Failed to write the downloaded file to the output archive: " + downloadUrl + "\n\n" + err.Error() + "\n")
-			}
-
-			// Success at last.
-			fmt.Printf("Downloaded attachment into output archive: %s.\n", file.Id)
+			processSingleFile(logger, w, file, &post)
 		}
 	}
 
+	return nil
+}
+
+func processSingleFile(logger logrus.FieldLogger, w *zip.Writer, file *SlackFile, post *SlackPost) error {
+	// Check there's an Id, Name and either UrlPrivateDownload or UrlPrivate property.
+	if len(file.Id) < 1 || len(file.Name) < 1 || !(len(file.UrlPrivate) > 0 || len(file.UrlPrivateDownload) > 0) {
+		return errors.New("file_share post has missing properties on it's File object: " + post.Ts + "\n")
+	}
+
+	// Figure out the download URL to use.
+	var downloadUrl string
+	if len(file.UrlPrivateDownload) > 0 {
+		downloadUrl = file.UrlPrivateDownload
+	} else {
+		downloadUrl = file.UrlPrivate
+	}
+
+	// Build the output file path.
+	outputPath := "__uploads/" + file.Id + "/" + file.Name
+
+	// Create the file in the zip output file.
+	outFile, err := w.Create(outputPath)
+	if err != nil {
+		return errors.Wrapf(err, "failed to create output file in output archive: %s", outputPath)
+	}
+
+	// Fetch the file.
+	response, err := http.Get(downloadUrl)
+	if err != nil {
+		return errors.Wrapf(err, "failed to download the file: %s", downloadUrl)
+	}
+	defer response.Body.Close()
+
+	// Save the file to the output zip file.
+	_, err = io.Copy(outFile, response.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to write the downloaded file to the output archive: %s")
+	}
+
+	// Success at last.
+	logger.Debugf("Downloaded attachment into output archive: %s.\n", file.Id)
 	return nil
 }
 
