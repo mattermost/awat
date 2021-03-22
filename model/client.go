@@ -32,8 +32,14 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 	if err != nil {
 		return nil, err
 	}
+	defer closeBody(resp)
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return NewTranslationStatusFromReader(resp.Body)
 
-	return NewTranslationStatusFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetTranslationStatus returns the TranslationStatus struct returned
@@ -43,8 +49,14 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 	if err != nil {
 		return nil, err
 	}
+	defer closeBody(resp)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewTranslationStatusFromReader(resp.Body)
 
-	return NewTranslationStatusFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetTranslationStatusesByInstallation returns all Translations that
@@ -54,11 +66,15 @@ func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
+	defer closeBody(resp)
 
-	return NewTranslationStatusListFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewTranslationStatusListFromReader(resp.Body)
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetImportStatusesByInstallation returns all Imports that
@@ -68,11 +84,17 @@ func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*Impo
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
+	defer closeBody(resp)
 
-	return NewImportStatusListFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusListFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetAllTranslations gets all Translations from the API and returns
@@ -82,11 +104,17 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
+	defer closeBody(resp)
 
-	return NewTranslationStatusListFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewTranslationStatusListFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetTranslationReadyToImport gets and claims the next Import waiting
@@ -97,11 +125,17 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
+	defer closeBody(resp)
 
-	return NewImportStatusFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // GetImportStatus returns the status of a single import specified by
@@ -111,8 +145,17 @@ func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer closeBody(resp)
 
-	return NewImportStatusFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // ListImports returns all Imports on the AWAT
@@ -122,11 +165,17 @@ func (c *Client) ListImports() ([]*ImportStatus, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
+	defer closeBody(resp)
 
-	return NewImportStatusListFromReader(resp.Body)
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusListFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
 }
 
 // closeBody ensures the Body of an http.Response is properly closed.
