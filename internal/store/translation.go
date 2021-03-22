@@ -88,7 +88,7 @@ func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Tra
 // newest
 func (sqlStore *SQLStore) GetTranslationReadyToStart() (*model.Translation, error) {
 	translations := []*model.Translation{}
-	err := sqlStore.selectBuilder(sqlStore.db, translations,
+	err := sqlStore.selectBuilder(sqlStore.db, &translations,
 		translationSelect.
 			Where("StartAt = 0").
 			Where("LockedBy = ''").
