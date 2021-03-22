@@ -69,7 +69,7 @@ func FetchAttachedFiles(logger logrus.FieldLogger, inputArchive string, outputAr
 		splits := strings.Split(file.Name, "/")
 		if len(splits) == 2 && !strings.HasPrefix(splits[0], "__") && strings.HasSuffix(splits[1], ".json") {
 			// Parse this file.
-			err = processChannelFile(logger, w, file.Name, inBuf)
+			err = processChannelPostsWithFiles(logger, w, file.Name, inBuf)
 			if err != nil {
 				logger.WithError(err).Errorf("failed to process file %s", file.Name)
 				continue
@@ -86,9 +86,9 @@ func FetchAttachedFiles(logger logrus.FieldLogger, inputArchive string, outputAr
 	return nil
 }
 
-// processChannelFile actually fetches and adds a found file to the
+// processChannelPostsWithFiles actually fetches and adds a found file to the
 // archive specified at file
-func processChannelFile(logger logrus.FieldLogger, w *zip.Writer, fileName string, inBuf []byte) error {
+func processChannelPostsWithFiles(logger logrus.FieldLogger, w *zip.Writer, fileName string, inBuf []byte) error {
 	// Parse the JSON of the file.
 	var posts []SlackPost
 	if err := json.Unmarshal(inBuf, &posts); err != nil {
