@@ -86,21 +86,25 @@ func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Tra
 // GetTranslationsReadyToStart returns a batch of Translations that
 // are ready to go, with a maximum of ten, sorted from oldest to
 // newest
-func (sqlStore *SQLStore) GetTranslationsReadyToStart() ([]*model.Translation, error) {
-	translations := &[]*model.Translation{}
+func (sqlStore *SQLStore) GetTranslationReadyToStart() (*model.Translation, error) {
+	translations := []*model.Translation{}
 	err := sqlStore.selectBuilder(sqlStore.db, translations,
 		translationSelect.
 			Where("StartAt = 0").
 			Where("LockedBy = ''").
 			OrderBy("CreateAt ASC").
-			Limit(10),
+			Limit(1),
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to find a ready Translation")
 	}
 
-	return *translations, nil
+	if len(translations) == 0 {
+		return nil, nil
+	}
+
+	return translations[0], nil
 }
 
 // StoreTranslation saves the specified Translation to the database,
