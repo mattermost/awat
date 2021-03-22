@@ -154,7 +154,7 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 // TryLockTranslation attempts to claim the given translation for the
 // owner ID provided and returns an error if it fails to do so
 func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, owner string) error {
-	sqlStore.logger.Infof("locking %s as %s", translation.ID, owner)
+	sqlStore.logger.Infof("Locking %s as %s", translation.ID, owner)
 	translation.LockedBy = owner
 
 	result, err := sqlStore.execBuilder(
