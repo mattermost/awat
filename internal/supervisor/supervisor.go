@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -89,13 +90,13 @@ func (s *Supervisor) supervise() error {
 	}
 
 	translation.CompleteAt = model.Timestamp()
-	translation.Output = output
 	err = s.store.UpdateTranslation(translation)
 	if err != nil {
 		return errors.Wrapf(err, "failed to store completed Translation %s; the Translation may be erroneously repeated!", translation.ID)
 	}
 
-	imp := model.NewImport(translation.ID)
+	importResource := fmt.Sprintf("%s/%s", s.bucket, output)
+	imp := model.NewImport(translation.ID, importResource)
 	err = s.store.StoreImport(imp)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create an Import for Translation %s; the Translation may be complete but it will not be imported automatically", translation.ID)

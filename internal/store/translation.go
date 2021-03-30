@@ -18,11 +18,9 @@ func init() {
 			"CompleteAt",
 			"CreateAt",
 			"StartAt",
-
 			"ID",
 			"InstallationID",
 			"LockedBy",
-			"Output",
 			"Resource",
 			"Team",
 			"Type",
@@ -120,7 +118,6 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
 			"LockedBy":       translation.LockedBy,
-			"Output":         translation.Output,
 			"Resource":       translation.Resource,
 			"Team":           translation.Team,
 			"Type":           translation.Type,
@@ -142,7 +139,6 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
 			"LockedBy":       translation.LockedBy,
-			"Output":         translation.Output,
 			"Resource":       translation.Resource,
 			"Team":           translation.Team,
 			"Type":           translation.Type,
@@ -154,7 +150,7 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 // TryLockTranslation attempts to claim the given translation for the
 // owner ID provided and returns an error if it fails to do so
 func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, owner string) error {
-	sqlStore.logger.Infof("Locking %s as %s", translation.ID, owner)
+	sqlStore.logger.Infof("Locking Translation %s as %s", translation.ID, owner)
 	translation.LockedBy = owner
 
 	result, err := sqlStore.execBuilder(

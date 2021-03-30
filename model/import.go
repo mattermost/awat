@@ -16,12 +16,14 @@ const (
 // Import represents a completed Translation that is being imported
 // into an Installation in order to track that process
 type Import struct {
-	ID            string
-	CreateAt      int64
-	CompleteAt    int64
-	StartAt       int64
-	LockedBy      string
-	TranslationID string
+	ID             string
+	CreateAt       int64
+	CompleteAt     int64
+	StartAt        int64
+	LockedBy       string
+	TranslationID  string
+	InstallationID string
+	Resource       string
 }
 
 // ImportWorkRequest contains an identifier from the caller in order
@@ -32,11 +34,12 @@ type ImportWorkRequest struct {
 
 // NewImport creates an Import with the appropriate creation-time
 // metadata and associates it with the given translationID
-func NewImport(translationID string) *Import {
+func NewImport(translationID string, input string) *Import {
 	return &Import{
 		ID:            NewID(),
 		TranslationID: translationID,
 		CreateAt:      Timestamp(),
+		Resource:      input,
 	}
 }
 
@@ -46,7 +49,8 @@ func NewImport(translationID string) *Import {
 type ImportStatus struct {
 	Import
 
-	State string
+	InstallationID string
+	State          string
 }
 
 // State determines and returns the current state of the Import given

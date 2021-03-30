@@ -21,6 +21,7 @@ func init() {
 			"LockedBy",
 			"StartAt",
 			"TranslationID",
+			"Resource",
 		).
 		From(ImportTableName)
 }
@@ -103,6 +104,7 @@ func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 			"LockedBy":      imp.LockedBy,
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
+			"Resource":      imp.Resource,
 		}),
 	)
 	return err
@@ -119,6 +121,7 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 			"LockedBy":      imp.LockedBy,
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
+			"Resource":      imp.Resource,
 		}).
 		Where("ID = ?", imp.ID),
 	)
@@ -151,7 +154,7 @@ func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, 
 // owner, but will not do so if the column already contains something,
 // and will return an error instead in that case
 func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
-	sqlStore.logger.Infof("locking %s as %s", imp.ID, owner)
+	sqlStore.logger.Infof("Locking Import %s as %s", imp.ID, owner)
 	imp.LockedBy = owner
 
 	result, err := sqlStore.execBuilder(
