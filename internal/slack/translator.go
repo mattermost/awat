@@ -60,16 +60,19 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 		mbifName,
 		translation.Team,
 		attachmentDirName,
+		workdir,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to transform Slack archive to MBIF")
 	}
 
+	logger.Infof("Preparing Mattermost archive for Translation %s for upload", translation.ID)
 	outputZip, err := st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
 	if err != nil {
 		return "", err
 	}
 
+	logger.Infof("Uploading Mattermost archive for Translation %s", translation.ID)
 	err = st.uploadTransformedZip(outputZip, st.bucket)
 	if err != nil {
 		return "", err

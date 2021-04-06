@@ -5,6 +5,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/awat/model"
+	"github.com/pkg/errors"
 )
 
 // handleStartImport handles POST requests sent to /import This
@@ -33,7 +34,13 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, importStatusFromImport(work))
+	status, err := importStatusFromImport(work, c.Store)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to get ImportStatus for Import %s", work.ID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	outputJSON(c, w, status)
 }
 
 // handleListImports responds to GET /imports and returns all Imports
@@ -49,7 +56,13 @@ func handleListImports(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, importStatusListFromImports(imports))
+	statuses, err := importStatusListFromImports(imports, c.Store)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get ImportStatuses")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	outputJSON(c, w, statuses)
 }
 
 // handleGetImport responds to GET /import/{id} with one Import
@@ -69,7 +82,13 @@ func handleGetImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, importStatusFromImport(imprt))
+	status, err := importStatusFromImport(imprt, c.Store)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to generate ImportStatus with ID %s", importID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	outputJSON(c, w, status)
 }
 
 // handleGetImportStatusesByInstallation allows easily looking up all
@@ -86,19 +105,34 @@ func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	outputJSON(c, w, importStatusListFromImports(imports))
-}
-
-func importStatusFromImport(imp *model.Import) (status *model.ImportStatus) {
-	return &model.ImportStatus{
-		Import: *imp,
-		State:  imp.State(),
+	statuses, err := importStatusListFromImports(imports, c.Store)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to get ImportStatuses")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+	outputJSON(c, w, statuses)
 }
 
-func importStatusListFromImports(imports []*model.Import) (statuses []*model.ImportStatus) {
+func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus, error) {
+	translation, err := store.GetTranslation(imp.TranslationID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to lookup Translation %s", imp.TranslationID)
+	}
+	return &model.ImportStatus{
+		Import:         *imp,
+		InstallationID: translation.InstallationID,
+		State:          imp.State(),
+	}, nil
+}
+
+func importStatusListFromImports(imports []*model.Import, store Store) (statuses []*model.ImportStatus, err error) {
 	for _, t := range imports {
-		statuses = append(statuses, importStatusFromImport(t))
+		status, err := importStatusFromImport(t, store)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get create ImportStatus from Import %s", t.ID)
+		}
+		statuses = append(statuses, status)
 	}
 	return
 }

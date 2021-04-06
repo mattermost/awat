@@ -34,11 +34,10 @@ var migrations = []migration{
 
 			_, err = e.Exec(`
 				CREATE TABLE Translation (
-						ID              TEXT PRIMARY KEY,
+						ID              TEXT PRIMARY KEY NOT NULL,
 						InstallationID  TEXT,
 						Type            TEXT,
 						Resource        TEXT,
-						Output          TEXT,
 						Error           TEXT,
 						CreateAt        BigInt,
 						StartAt         BigInt,
@@ -48,11 +47,12 @@ var migrations = []migration{
 				);
 
 				CREATE TABLE Import (
-						ID             TEXT PRIMARY KEY,
+						ID             TEXT PRIMARY KEY NOT NULL,
 						CreateAt       BigInt,
 						CompleteAt     BigInt,
 						StartAt        BigInt,
 						LockedBy       TEXT,
+						Resource       TEXT,
 						TranslationID  TEXT
 				);
 
