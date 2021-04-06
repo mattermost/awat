@@ -16,14 +16,13 @@ const (
 // Import represents a completed Translation that is being imported
 // into an Installation in order to track that process
 type Import struct {
-	ID             string
-	CreateAt       int64
-	CompleteAt     int64
-	StartAt        int64
-	LockedBy       string
-	TranslationID  string
-	InstallationID string
-	Resource       string
+	ID            string
+	CreateAt      int64
+	CompleteAt    int64
+	StartAt       int64
+	LockedBy      string
+	TranslationID string
+	Resource      string
 }
 
 // ImportWorkRequest contains an identifier from the caller in order
