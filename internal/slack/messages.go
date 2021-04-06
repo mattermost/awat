@@ -47,10 +47,6 @@ func TransformSlack(inputFilePath, outputFilePath, team, attachmentsDir, workdir
 	// Transform -- however this seems to be fairly involved so for now
 	// just fix these paths after the fact
 	for _, post := range intermediate.Posts {
-		if len(post.Attachments) < 1 {
-			continue
-		}
-
 		for i, attachment := range post.Attachments {
 			post.Attachments[i] = strings.TrimPrefix(attachment, workdir)
 		}
