@@ -122,6 +122,8 @@ func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus
 	return &model.ImportStatus{
 		Import:         *imp,
 		InstallationID: translation.InstallationID,
+		Users:          translation.Users,
+		Team:           translation.Team,
 		State:          imp.State(),
 	}, nil
 }

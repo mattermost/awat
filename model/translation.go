@@ -12,8 +12,8 @@ type Translation struct {
 	ID             string
 	InstallationID string
 	Team           string
+	Users          int
 	Type           string
-	Output         string
 	Resource       string
 	CreateAt       int64
 	StartAt        int64

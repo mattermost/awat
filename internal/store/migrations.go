@@ -43,6 +43,7 @@ var migrations = []migration{
 						StartAt         BigInt,
 						CompleteAt      BigInt,
 						Team            TEXT,
+						Users           Integer,
 						LockedBy        TEXT
 				);
 

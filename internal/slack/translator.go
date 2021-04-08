@@ -56,9 +56,9 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	mbifName := fmt.Sprintf("%s/%s_MBIF.jsonl", workdir, translation.InstallationID)
 	logger.Infof("Transforming Slack archive for Translation %s to MBIF", translation.ID)
 	err = TransformSlack(
+		translation,
 		archiveWithFilesName,
 		mbifName,
-		translation.Team,
 		attachmentDirName,
 		workdir,
 	)
