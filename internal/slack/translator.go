@@ -143,9 +143,9 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 		return "", errors.Wrap(err, "failed to fetch attached files")
 	}
 
-	err = os.Mkdir(attachmentDirName, 0700)
+	err = os.MkdirAll(attachmentDirName, 0700)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create attachments directory")
+		return "", errors.Wrapf(err, "failed to create attachments directory %s", attachmentDirName)
 	}
 
 	return withFiles.Name(), nil
