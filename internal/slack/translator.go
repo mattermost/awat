@@ -189,7 +189,7 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 		if attachment.IsDir() {
 			continue
 		}
-		attachmentInZipfile, err := outputZipfile.Create(fmt.Sprintf("attachments/%s", attachment.Name()))
+		attachmentInZipfile, err := outputZipfile.Create(fmt.Sprintf("/data/attachments/%s", attachment.Name()))
 		if err != nil {
 			logger.WithError(err).Error("failed to write attachment")
 			continue
@@ -199,8 +199,8 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 			logger.WithError(err).Errorf("failed to open attachment file %s", attachmentDirName+attachment.Name())
 			continue
 		}
+		defer attachmentFile.Close()
 		_, err = io.Copy(attachmentInZipfile, attachmentFile)
-		_ = attachmentFile.Close()
 		if err != nil {
 			logger.
 				WithError(err).
