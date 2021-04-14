@@ -56,9 +56,9 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	mbifName := fmt.Sprintf("%s/%s_MBIF.jsonl", workdir, translation.InstallationID)
 	logger.Infof("Transforming Slack archive for Translation %s to MBIF", translation.ID)
 	err = TransformSlack(
+		translation,
 		archiveWithFilesName,
 		mbifName,
-		translation.Team,
 		attachmentDirName,
 		workdir,
 	)
@@ -143,9 +143,9 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 		return "", errors.Wrap(err, "failed to fetch attached files")
 	}
 
-	err = os.Mkdir(attachmentDirName, 0700)
+	err = os.MkdirAll(attachmentDirName, 0700)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create attachments directory")
+		return "", errors.Wrapf(err, "failed to create attachments directory %s", attachmentDirName)
 	}
 
 	return withFiles.Name(), nil
@@ -189,7 +189,7 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 		if attachment.IsDir() {
 			continue
 		}
-		attachmentInZipfile, err := outputZipfile.Create(fmt.Sprintf("attachments/%s", attachment.Name()))
+		attachmentInZipfile, err := outputZipfile.Create(fmt.Sprintf("/data/attachments/%s", attachment.Name()))
 		if err != nil {
 			logger.WithError(err).Error("failed to write attachment")
 			continue
@@ -199,8 +199,8 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 			logger.WithError(err).Errorf("failed to open attachment file %s", attachmentDirName+attachment.Name())
 			continue
 		}
+		defer attachmentFile.Close()
 		_, err = io.Copy(attachmentInZipfile, attachmentFile)
-		_ = attachmentFile.Close()
 		if err != nil {
 			logger.
 				WithError(err).

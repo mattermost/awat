@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mattermost/awat/model"
 	mmetl "github.com/mattermost/mmetl/services/slack"
 )
 
@@ -15,7 +16,7 @@ import (
 // in the JSONL lines that make up the MBIF referring to any attached
 // files in attachmentsDir. The attached files will also be extracted
 // from the file at inputFilePath and stored in attachmentsDir
-func TransformSlack(inputFilePath, outputFilePath, team, attachmentsDir, workdir string) error {
+func TransformSlack(translation *model.Translation, inputFilePath, outputFilePath, attachmentsDir, workdir string) error {
 	// input file
 	fileReader, err := os.Open(inputFilePath)
 	if err != nil {
@@ -33,7 +34,7 @@ func TransformSlack(inputFilePath, outputFilePath, team, attachmentsDir, workdir
 		return err
 	}
 
-	slackExport, err := mmetl.ParseSlackExportFile(team, zipReader, false)
+	slackExport, err := mmetl.ParseSlackExportFile(translation.Team, zipReader, false)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,10 @@ func TransformSlack(inputFilePath, outputFilePath, team, attachmentsDir, workdir
 		}
 	}
 
-	if err = mmetl.Export(team, intermediate, outputFilePath); err != nil {
+	// this total may include bots
+	translation.Users = len(intermediate.UsersById)
+
+	if err = mmetl.Export(translation.Team, intermediate, outputFilePath); err != nil {
 		return err
 	}
 

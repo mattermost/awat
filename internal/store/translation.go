@@ -23,6 +23,7 @@ func init() {
 			"LockedBy",
 			"Resource",
 			"Team",
+			"Users",
 			"Type",
 		).
 		From(TranslationTableName)
@@ -120,6 +121,7 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 			"LockedBy":       translation.LockedBy,
 			"Resource":       translation.Resource,
 			"Team":           translation.Team,
+			"Users":          translation.Users,
 			"Type":           translation.Type,
 		}),
 	)
@@ -141,6 +143,7 @@ func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) erro
 			"LockedBy":       translation.LockedBy,
 			"Resource":       translation.Resource,
 			"Team":           translation.Team,
+			"Users":          translation.Users,
 			"Type":           translation.Type,
 		}).Where("ID = ?", translation.ID),
 	)

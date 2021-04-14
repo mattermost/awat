@@ -49,6 +49,8 @@ type ImportStatus struct {
 	Import
 
 	InstallationID string
+	Users          int
+	Team           string
 	State          string
 }
 
