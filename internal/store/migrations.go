@@ -54,7 +54,8 @@ var migrations = []migration{
 						StartAt        BigInt,
 						LockedBy       TEXT,
 						Resource       TEXT,
-						TranslationID  TEXT
+						TranslationID  TEXT NOT NULL,
+						Error          TEXT
 				);
 
 				ALTER TABLE Import 

@@ -23,12 +23,23 @@ type Import struct {
 	LockedBy      string
 	TranslationID string
 	Resource      string
+	Error         string
+	Retry         bool
 }
 
 // ImportWorkRequest contains an identifier from the caller in order
 // to claim an import for the caller at request time
 type ImportWorkRequest struct {
 	ProvisionerID string
+}
+
+// ImportCompletedWorkRequest contains the metadata needed from the
+// Provisioner for the AWAT to mark that an import has finished with
+// or without an error
+type ImportCompletedWorkRequest struct {
+	ID         string
+	CompleteAt int64
+	Error      string
 }
 
 // NewImport creates an Import with the appropriate creation-time
@@ -74,7 +85,16 @@ func NewImportWorkRequestFromReader(reader io.Reader) (*ImportWorkRequest, error
 	var request ImportWorkRequest
 	err := json.NewDecoder(reader).Decode(&request)
 	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode translation start request")
+		return nil, errors.Wrap(err, "failed to decode import start request")
+	}
+	return &request, nil
+}
+
+func NewImportCompletedWorkRequestFromReader(reader io.Reader) (*ImportCompletedWorkRequest, error) {
+	var request ImportCompletedWorkRequest
+	err := json.NewDecoder(reader).Decode(&request)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode import completion request")
 	}
 	return &request, nil
 }
@@ -84,7 +104,7 @@ func NewImportFromReader(reader io.Reader) (*Import, error) {
 	var imp Import
 	err := json.NewDecoder(reader).Decode(&imp)
 	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode translation start request")
+		return nil, errors.Wrap(err, "failed to decode Import")
 	}
 	return &imp, nil
 }

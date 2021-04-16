@@ -14,6 +14,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 	rootRouter.Handle("/translations", addContext(handleListTranslations)).Methods("GET")
 
 	rootRouter.Handle("/import", addContext(handleStartImport)).Methods("POST")
+	rootRouter.Handle("/import", addContext(handleCompleteImport)).Methods("PUT")
 	rootRouter.Handle("/import/{id}", addContext(handleGetImport)).Methods("GET")
 	rootRouter.Handle("/imports", addContext(handleListImports)).Methods("GET")
 

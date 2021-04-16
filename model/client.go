@@ -138,6 +138,23 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 	}
 }
 
+// CompleteImport marks an Import as finished, with or without an error
+func (c *Client) CompleteImport(completed *ImportCompletedWorkRequest) error {
+	resp, err := c.doPut(c.buildURL("/import"), completed)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // GetImportStatus returns the status of a single import specified by
 // ID
 func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {

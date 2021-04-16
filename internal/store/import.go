@@ -22,6 +22,7 @@ func init() {
 			"StartAt",
 			"TranslationID",
 			"Resource",
+			"Error",
 		).
 		From(ImportTableName)
 }
@@ -105,6 +106,7 @@ func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
 			"Resource":      imp.Resource,
+			"Error":         imp.Error,
 		}),
 	)
 	return err
@@ -122,6 +124,7 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
 			"Resource":      imp.Resource,
+			"Error":         imp.Error,
 		}).
 		Where("ID = ?", imp.ID),
 	)

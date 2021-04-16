@@ -114,6 +114,40 @@ func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r 
 	outputJSON(c, w, statuses)
 }
 
+func handleCompleteImport(c *Context, w http.ResponseWriter, r *http.Request) {
+	completed, err := model.NewImportCompletedWorkRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode completed work request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	imp, err := c.Store.GetImport(completed.ID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to look up Import %s", completed.ID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if imp == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	imp.CompleteAt = completed.CompleteAt
+	imp.LockedBy = ""
+	imp.Error = completed.Error
+
+	err = c.Store.UpdateImport(imp)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to update Import with info: %+v", completed)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus, error) {
 	translation, err := store.GetTranslation(imp.TranslationID)
 	if err != nil {
