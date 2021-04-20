@@ -79,8 +79,8 @@ func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]
 
 // GetImportStatusesByInstallation returns all Imports that
 // pertain to an Installation
-func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*ImportStatus, error) {
-	resp, err := c.doGet(c.buildURL("/installation/import/%s", installationId))
+func (c *Client) GetImportStatusesByInstallation(installationID string) ([]*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/installation/import/%s", installationID))
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +95,25 @@ func (c *Client) GetImportStatusesByInstallation(installationId string) ([]*Impo
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
+}
+
+func (c *Client) GetImportStatusesByTranslation(translationID string) ([]*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/translation/%s/import", translationID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusListFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+
 }
 
 // GetAllTranslations gets all Translations from the API and returns
@@ -135,6 +154,23 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// CompleteImport marks an Import as finished, with or without an error
+func (c *Client) ReleaseLockOnImport(importID string) error {
+	resp, err := c.doGet(c.buildURL("/import/%s/release", importID))
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return nil
+
+	default:
+		return errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
 }
 

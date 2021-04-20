@@ -153,6 +153,20 @@ func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, 
 	return *imports, nil
 }
 
+// GetImportsByTranslation provides a convenience function for
+// looking up all Imports that belong to a given Translation
+func (sqlStore *SQLStore) GetImportsByTranslation(id string) ([]*model.Import, error) {
+	imprts := &[]*model.Import{}
+	err := sqlStore.selectBuilder(sqlStore.db, imprts,
+		importSelect.Where("TranslationID = ?", id),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return *imprts, nil
+}
+
 // TryLockImport attempts to lock the input Import with the given
 // owner, but will not do so if the column already contains something,
 // and will return an error instead in that case

@@ -24,7 +24,6 @@ type Import struct {
 	TranslationID string
 	Resource      string
 	Error         string
-	Retry         bool
 }
 
 // ImportWorkRequest contains an identifier from the caller in order

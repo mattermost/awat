@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	translationId   = "translation-id"
+	translationID   = "translation-id"
 	installationID  = "installation-id"
 	archiveFilename = "filename"
 	teamFlag        = "team"
@@ -21,7 +21,7 @@ func init() {
 	translationCmd.PersistentFlags().String(installationID, "", "ID of the installation associated with a translation")
 	translationCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
 
-	getTranslationCmd.PersistentFlags().String(translationId, "", "ID of the translation to operate on")
+	getTranslationCmd.PersistentFlags().String(translationID, "", "ID of the translation to operate on")
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
@@ -46,7 +46,7 @@ var getTranslationCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 
 		installation, _ := cmd.Flags().GetString(installationID)
-		translation, _ := cmd.Flags().GetString(translationId)
+		translation, _ := cmd.Flags().GetString(translationID)
 
 		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)

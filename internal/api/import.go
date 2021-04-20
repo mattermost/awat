@@ -43,6 +43,27 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, status)
 }
 
+func handleReleaseLockOnImport(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	importID := vars["id"]
+	imprt, err := c.Store.GetImport(importID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to fetch import with ID %s", importID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	imprt.LockedBy = ""
+	err = c.Store.UpdateImport(imprt)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to release lock on Import %s", importID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // handleListImports responds to GET /imports and returns all Imports
 // in the database
 // TODO add pagination to this endpoint

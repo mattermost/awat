@@ -8,16 +8,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const importID = "import-id"
+const id = "id"
 
 func init() {
 	importCmd.PersistentFlags().String(serverFlag, "http://localhost:8077", "The AWAT to communicate with")
-
-	getImportCmd.PersistentFlags().String(importID, "", "ID of the Import to operate on")
-	getImportCmd.PersistentFlags().String(installationID, "", "ID of the installation associated with an import")
-
 	importCmd.AddCommand(getImportCmd)
 	importCmd.AddCommand(listImportCmd)
+	getImportCmd.PersistentFlags().String(id, "", "ID of the item by which to select Imports")
+
+	getImportCmd.AddCommand(getImportByIDCmd)
+	getImportCmd.AddCommand(getImportByTranslationCmd)
+	getImportCmd.AddCommand(getImportByInstallationCmd)
+}
+
+var getImportCmd = &cobra.Command{
+	Use:   "get",
+	Short: "Get Imports",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return nil
+	},
 }
 
 var importCmd = &cobra.Command{
@@ -29,41 +39,68 @@ var importCmd = &cobra.Command{
 	},
 }
 
-var getImportCmd = &cobra.Command{
-	Use:   "get",
-	Short: "Fetch an import by ID from the AWAT to get its status",
+var getImportByTranslationCmd = &cobra.Command{
+	Use:   "translation",
+	Short: "Get Imports by the Translation ID to which they correlate",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		imprt, _ := cmd.Flags().GetString(importID)
 		server, _ := cmd.Flags().GetString(serverFlag)
-		_ = model.NewClient(server)
-
-		installation, _ := cmd.Flags().GetString(installationID)
+		translation, _ := cmd.Flags().GetString(id)
 		awat := model.NewClient(server)
-		if (installation == "" && imprt == "") || (installation != "" && imprt != "") {
-			return errors.New("one and only one of translation-id or import-id must be specified")
+		if translation == "" {
+			return errors.New("Must provide an Translation ID to search by Translation ID")
 		}
-		if installation != "" {
-			status, err := awat.GetImportStatusesByInstallation(installation)
-			if len(status) > 0 {
-				_ = printJSON(status)
-			}
+		statuses, err := awat.GetImportStatusesByTranslation(translation)
+		if err != nil {
 			return err
-		} else {
-			status, err := awat.GetImportStatus(imprt)
-			if err != nil {
-				return err
-			}
+		}
+		if len(statuses) > 0 {
+			_ = printJSON(statuses)
+			return nil
+		}
+		fmt.Println("No Imports found.")
+		return nil
+	},
+}
 
-			if status == nil {
-				fmt.Println("No translations found")
-			}
+var getImportByIDCmd = &cobra.Command{
+	Use:   "import",
+	Short: "Get an Import by its ID",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		imprt, _ := cmd.Flags().GetString(id)
+		server, _ := cmd.Flags().GetString(serverFlag)
+		awat := model.NewClient(server)
+		status, err := awat.GetImportStatus(imprt)
+		if err != nil {
+			return err
+		}
 
-			if status != nil {
-				_ = printJSON(status)
-			}
+		if status == nil {
+			fmt.Printf("No Import found with ID %s", imprt)
+		}
+
+		if status != nil {
+			_ = printJSON(status)
 		}
 
 		return nil
+	},
+}
+
+var getImportByInstallationCmd = &cobra.Command{
+	Use:   "installation",
+	Short: "Get the translations which correlate to the given Installation",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		server, _ := cmd.Flags().GetString(serverFlag)
+		installation, _ := cmd.Flags().GetString(id)
+		awat := model.NewClient(server)
+		if installation == "" {
+			return errors.New("Must provide an Installation ID to search by Installation ID")
+		}
+		status, err := awat.GetImportStatusesByInstallation(installation)
+		if len(status) > 0 {
+			_ = printJSON(status)
+		}
+		return err
 	},
 }
 
