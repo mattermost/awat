@@ -47,7 +47,7 @@ var getImportByTranslationCmd = &cobra.Command{
 		translation, _ := cmd.Flags().GetString(id)
 		awat := model.NewClient(server)
 		if translation == "" {
-			return errors.New("Must provide a Translation ID")
+			return errors.New("must provide a Translation ID")
 		}
 		statuses, err := awat.GetImportStatusesByTranslation(translation)
 		if err != nil {
@@ -94,7 +94,7 @@ var getImportByInstallationCmd = &cobra.Command{
 		installation, _ := cmd.Flags().GetString(id)
 		awat := model.NewClient(server)
 		if installation == "" {
-			return errors.New("Must provide an Installation ID")
+			return errors.New("must provide an Installation ID")
 		}
 		status, err := awat.GetImportStatusesByInstallation(installation)
 		if len(status) > 0 {
