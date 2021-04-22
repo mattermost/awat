@@ -43,6 +43,27 @@ func handleStartImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	outputJSON(c, w, status)
 }
 
+func handleReleaseLockOnImport(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	importID := vars["id"]
+	imprt, err := c.Store.GetImport(importID)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to fetch import with ID %s", importID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	imprt.LockedBy = ""
+	err = c.Store.UpdateImport(imprt)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to release lock on Import %s", importID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // handleListImports responds to GET /imports and returns all Imports
 // in the database
 // TODO add pagination to this endpoint
@@ -112,6 +133,40 @@ func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r 
 		return
 	}
 	outputJSON(c, w, statuses)
+}
+
+func handleCompleteImport(c *Context, w http.ResponseWriter, r *http.Request) {
+	completed, err := model.NewImportCompletedWorkRequestFromReader(r.Body)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to decode completed work request")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	imp, err := c.Store.GetImport(completed.ID)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to look up Import %s", completed.ID)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if imp == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	imp.CompleteAt = completed.CompleteAt
+	imp.LockedBy = ""
+	imp.Error = completed.Error
+
+	err = c.Store.UpdateImport(imp)
+	if err != nil {
+		c.Logger.WithError(err).Errorf("failed to update Import with info: %+v", completed)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus, error) {

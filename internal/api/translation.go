@@ -91,6 +91,27 @@ func handleGetTranslationStatusesByInstallation(c *Context, w http.ResponseWrite
 	outputJSON(c, w, translationStatusListFromTranslations(translations))
 }
 
+func handleGetImportStatusesForTranslation(c *Context, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	imports, err := c.Store.GetImportsByTranslation(id)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to fetch Imports")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	importStatusList, err := importStatusListFromImports(imports, c.Store)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to generate ImportStatus list from Import slice")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	outputJSON(c, w, importStatusList)
+}
+
 // outputJSON is a helper method to write the given data as JSON to the given writer.
 //
 // It only logs an error if one occurs, rather than returning, since there is no point in trying

@@ -13,4 +13,6 @@ type Store interface {
 	GetAllImports() ([]*model.Import, error)
 	GetImport(id string) (*model.Import, error)
 	GetImportsByInstallation(id string) ([]*model.Import, error)
+	GetImportsByTranslation(id string) ([]*model.Import, error)
+	UpdateImport(imp *model.Import) error
 }

@@ -22,6 +22,7 @@ func init() {
 			"StartAt",
 			"TranslationID",
 			"Resource",
+			"Error",
 		).
 		From(ImportTableName)
 }
@@ -105,6 +106,7 @@ func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
 			"Resource":      imp.Resource,
+			"Error":         imp.Error,
 		}),
 	)
 	return err
@@ -122,6 +124,7 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
 			"Resource":      imp.Resource,
+			"Error":         imp.Error,
 		}).
 		Where("ID = ?", imp.ID),
 	)
@@ -148,6 +151,20 @@ func (sqlStore *SQLStore) GetImportsByInstallation(id string) ([]*model.Import, 
 	}
 
 	return *imports, nil
+}
+
+// GetImportsByTranslation provides a convenience function for
+// looking up all Imports that belong to a given Translation
+func (sqlStore *SQLStore) GetImportsByTranslation(id string) ([]*model.Import, error) {
+	imprts := &[]*model.Import{}
+	err := sqlStore.selectBuilder(sqlStore.db, imprts,
+		importSelect.Where("TranslationID = ?", id),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return *imprts, nil
 }
 
 // TryLockImport attempts to lock the input Import with the given
