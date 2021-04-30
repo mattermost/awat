@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/pkg/errors"
@@ -127,4 +128,23 @@ func NewImportStatusListFromReader(reader io.Reader) ([]*ImportStatus, error) {
 		return nil, errors.Wrap(err, "failed to decode import status list")
 	}
 	return status, nil
+}
+
+// Matches determines whether or not two *ImportCompletedWorkRequests
+// point to the same logical request, in testing. Since this is for
+// testing, timestamps are ignored
+func (a *ImportCompletedWorkRequest) Matches(input interface{}) bool {
+	switch b := input.(type) {
+	case *ImportCompletedWorkRequest:
+		return a.ID == b.ID && a.Error == b.Error
+	default:
+		return false
+	}
+}
+
+// String outputs a stringular representation of
+// ImportCompletedWorkRequest. It is needed to satisfy the Matcher
+// interface
+func (i *ImportCompletedWorkRequest) String() string {
+	return fmt.Sprintf("ID: %s, Error: \"%s\", CompleteAt: %d", i.ID, i.Error, i.CompleteAt)
 }
