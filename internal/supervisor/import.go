@@ -51,9 +51,10 @@ func (s *ImportSupervisor) supervise() error {
 
 	for _, i := range imports {
 		if (time.Now().UnixNano()/1000)-i.StartAt < time.Second.Milliseconds()*10 {
-			// if the above condition is true, the Import is very new (less
-			// than 10 seconds old) and it's possible that the Provisioner
-			// hasn't picked it up yet
+			// if the above condition is true, the Import was claimed to be
+			// started very recently (less than 10 seconds ago) and it's
+			// possible that the Provisioner hasn't changed the state on the
+			// corresponding Installation yet
 
 			// the first thing the Provisioner does after getting some work
 			// is to lock the Installation, so the window for a race
