@@ -167,6 +167,19 @@ func (sqlStore *SQLStore) GetImportsByTranslation(id string) ([]*model.Import, e
 	return *imprts, nil
 }
 
+func (sqlStore *SQLStore) GetImportsInProgress() ([]*model.Import, error) {
+	imprts := &[]*model.Import{}
+	err := sqlStore.selectBuilder(sqlStore.db, imprts,
+		importSelect.Where("CompleteAt = 0"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return *imprts, nil
+
+}
+
 // TryLockImport attempts to lock the input Import with the given
 // owner, but will not do so if the column already contains something,
 // and will return an error instead in that case

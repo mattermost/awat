@@ -12,21 +12,21 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
-// Supervisor is responsible for scheduling and launching Translations
+// TranslationSupervisor is responsible for scheduling and launching Translations
 // in series
-type Supervisor struct {
+type TranslationSupervisor struct {
 	logger  log.FieldLogger
 	store   *store.SQLStore
 	bucket  string
 	workdir string
 }
 
-// NewSupervisor returns a Supervisor prepared with the needed
+// NewTranslationSupervisor returns a Supervisor prepared with the needed
 // metadata to operate
-func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdir string) *Supervisor {
-	return &Supervisor{
+func NewTranslationSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdir string) *TranslationSupervisor {
+	return &TranslationSupervisor{
 		store:   store,
-		logger:  logger.WithField("supervisor", model.NewID()),
+		logger:  logger.WithField("translation-supervisor", model.NewID()),
 		bucket:  bucket,
 		workdir: workdir,
 	}
@@ -34,8 +34,8 @@ func NewSupervisor(store *store.SQLStore, logger log.FieldLogger, bucket, workdi
 
 // Start runs the Supervisor's main routine on a new goroutine both
 // periodically and forever
-func (s *Supervisor) Start() {
-	s.logger.Info("Supervisor started")
+func (s *TranslationSupervisor) Start() {
+	s.logger.Info("Translation supervisor started")
 	go func() {
 		for {
 			err := s.supervise()
@@ -49,7 +49,7 @@ func (s *Supervisor) Start() {
 
 // supervise queries the database for available Translations and
 // works through the batch returned serially
-func (s *Supervisor) supervise() error {
+func (s *TranslationSupervisor) supervise() error {
 	translation, err := s.store.GetTranslationReadyToStart()
 	if err != nil {
 		return errors.Wrap(err, "Failed to query database for pending translations")

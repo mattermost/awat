@@ -25,6 +25,7 @@ const (
 	bucketFlag       = "bucket"
 	workingDirectory = "workdir"
 	serverFlag       = "server"
+	provisionerFlag  = "provisioner"
 )
 
 func init() {
@@ -32,6 +33,7 @@ func init() {
 	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found")
 	serverCmd.PersistentFlags().String(workingDirectory, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
+	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
 	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
 
@@ -68,9 +70,13 @@ var serverCmd = &cobra.Command{
 		}
 
 		bucket, _ := command.Flags().GetString(bucketFlag)
+		provisionerURL, _ := command.Flags().GetString(provisionerFlag)
 
-		supervisor := supervisor.NewSupervisor(sqlStore, logger, bucket, workdir)
-		supervisor.Start()
+		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
+		translationSupervisor.Start()
+
+		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, provisionerURL)
+		importSupervisor.Start()
 
 		router := mux.NewRouter()
 		api.Register(router, &api.Context{
