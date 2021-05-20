@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/mattermost/awat/model"
@@ -49,7 +50,11 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 	// just fix these paths after the fact
 	for _, post := range intermediate.Posts {
 		for i, attachment := range post.Attachments {
-			post.Attachments[i] = strings.TrimPrefix(attachment, workdir)
+			path, err := filepath.Abs("/data" + strings.TrimPrefix(attachment, workdir))
+			if err != nil {
+				return err
+			}
+			post.Attachments[i] = path
 		}
 	}
 
