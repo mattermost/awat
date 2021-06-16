@@ -79,6 +79,10 @@ func (s *ImportSupervisor) supervise() error {
 			s.logger.WithError(err).Warnf("failed to fetch information on Installation %s", translation.InstallationID)
 			continue
 		}
+		if installation == nil {
+			s.logger.WithError(errors.New("Installation not found")).Warnf("Installation with ID %s not found but no error was returned from the Provisioner", translation.InstallationID)
+			continue
+		}
 
 		// if the State is stable and the Installation is slightly old, we
 		// can safely assume that an import happened and was completed
