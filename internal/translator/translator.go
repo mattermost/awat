@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/mattermost/awat/internal/mattermost"
 	"github.com/mattermost/awat/internal/slack"
 	"github.com/mattermost/awat/model"
 )
@@ -30,9 +31,13 @@ func NewTranslator(t *TranslatorOptions) (Translator, error) {
 		return nil, errors.New("options struct must not be nil")
 	}
 
-	if t.ArchiveType != model.SlackWorkspaceBackupType {
-		return nil, fmt.Errorf("%s is not a supported workspace archive input type", t.ArchiveType)
+	if t.ArchiveType == model.SlackWorkspaceBackupType {
+		return slack.NewSlackTranslator(t.Bucket, t.WorkingDir), nil
 	}
 
-	return slack.NewSlackTranslator(t.Bucket, t.WorkingDir), nil
+	if t.ArchiveType == model.MattermostWorkspaceBackupType {
+		return mattermost.NewMattermostTranslator(), nil
+	}
+
+	return nil, fmt.Errorf("%s is not a supported workspace archive input type", t.ArchiveType)
 }

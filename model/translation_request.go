@@ -7,7 +7,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-const SlackWorkspaceBackupType string = "slack"
+const (
+	SlackWorkspaceBackupType      string = "slack"
+	MattermostWorkspaceBackupType string = "mattermost"
+)
 
 type TranslationRequest struct {
 	Type           string
