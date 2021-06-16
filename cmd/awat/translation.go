@@ -126,7 +126,8 @@ var startTranslationCmd = &cobra.Command{
 			return errors.New("the installation ID to which this translation pertains must be specified")
 		}
 		team, _ := cmd.Flags().GetString(teamFlag)
-		if team == "" {
+		if team == "" && translationType != model.MattermostWorkspaceBackupType {
+			// Mattermost backups include their team names, but other types don't
 			return errors.New("the team name to which this translation pertains must be specified")
 		}
 		archive, _ := cmd.Flags().GetString(archiveFilename)

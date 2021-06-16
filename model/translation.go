@@ -46,7 +46,10 @@ func (t *Translation) State() string {
 // NewTranslationFromRequest creates a new Translation from a
 // TranslationRequest
 func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translation {
-	teamName := cleanTeamName(translationRequest.Team)
+	teamName := translationRequest.Team
+	if translationRequest.Type != MattermostWorkspaceBackupType {
+		teamName = cleanTeamName(teamName)
+	}
 
 	return &Translation{
 		ID:             NewID(),
