@@ -20,6 +20,6 @@ build: ## build the AWAT
 
 build-image:   ## Build the docker image for the AWAT
 	@echo Building AWAT Docker Image
-	docker build \
+	podman build \
 	. -f build/Dockerfile -t $(AWAT_IMAGE) 
 # --no-cache
