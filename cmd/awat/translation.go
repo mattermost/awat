@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/mattermost/awat/model"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -118,7 +118,7 @@ var startTranslationCmd = &cobra.Command{
 		translationType, _ := cmd.Flags().GetString(translationTypeFlag)
 		if translationType != model.MattermostWorkspaceBackupType &&
 			translationType != model.SlackWorkspaceBackupType {
-			return fmt.Errorf("unknown Translation type \"%s\" provided", translationType)
+			return errors.Errorf("unknown Translation type %q provided", translationType)
 		}
 
 		installation, _ := cmd.Flags().GetString(installationID)
