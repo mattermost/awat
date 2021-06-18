@@ -182,6 +182,7 @@ func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus
 		Users:          translation.Users,
 		Team:           translation.Team,
 		State:          imp.State(),
+		Type:           translation.Type,
 	}, nil
 }
 

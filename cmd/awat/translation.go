@@ -2,19 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/mattermost/awat/model"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
 const (
-	translationID   = "translation-id"
-	installationID  = "installation-id"
-	archiveFilename = "filename"
-	teamFlag        = "team"
+	translationID       = "translation-id"
+	installationID      = "installation-id"
+	archiveFilename     = "filename"
+	teamFlag            = "team"
+	translationTypeFlag = "type"
 )
 
 func init() {
@@ -25,6 +26,7 @@ func init() {
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
+	startTranslationCmd.PersistentFlags().String(translationTypeFlag, model.SlackWorkspaceBackupType, "The type of backup being translated & imported (default: slack; valid options: mattermost, slack)")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
@@ -113,12 +115,19 @@ var startTranslationCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
+		translationType, _ := cmd.Flags().GetString(translationTypeFlag)
+		if translationType != model.MattermostWorkspaceBackupType &&
+			translationType != model.SlackWorkspaceBackupType {
+			return errors.Errorf("unknown Translation type %q provided", translationType)
+		}
+
 		installation, _ := cmd.Flags().GetString(installationID)
 		if installation == "" {
 			return errors.New("the installation ID to which this translation pertains must be specified")
 		}
 		team, _ := cmd.Flags().GetString(teamFlag)
-		if team == "" {
+		if team == "" && translationType != model.MattermostWorkspaceBackupType {
+			// Mattermost backups include their team names, but other types don't
 			return errors.New("the team name to which this translation pertains must be specified")
 		}
 		archive, _ := cmd.Flags().GetString(archiveFilename)
@@ -130,7 +139,7 @@ var startTranslationCmd = &cobra.Command{
 		var status *model.TranslationStatus
 		status, err = awat.CreateTranslation(
 			&model.TranslationRequest{
-				Type:           model.SlackWorkspaceBackupType,
+				Type:           translationType,
 				InstallationID: installation,
 				Archive:        archive,
 				Team:           team,
