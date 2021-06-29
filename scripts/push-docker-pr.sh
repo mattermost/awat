@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
-# See LICENSE for license information.
+# See LICENSE.txt for license information.
 
 set -e
 set -u
