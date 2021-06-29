@@ -1,0 +1,46 @@
+version: 2.1
+executors:
+  default:
+    docker:
+    - image: circleci/golang:1.16.2
+
+aliases:
+- &restore_cache
+  restore_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+- &save_cache
+  save_cache:
+    key: go-mod-v1-{{ checksum "go.sum" }}
+    paths:
+      - "/go/pkg/mod"
+
+jobs:
+    push-docker-pr:
+        executor:
+            name: default
+        steps:
+        - checkout
+        - setup_remote_docker
+        - run: make build-image
+        - run: ./scripts/push-docker-pr.sh
+        - run:
+            name: Re-run Docker Push if fail
+            command: |
+                sleep 20
+                ./scripts/push-docker-pr.sh
+            when: on_fail
+
+    push-docker:
+        executor:
+            name: default
+        steps:
+        - checkout
+        - setup_remote_docker
+        - run: make build-image
+        - run: ./scripts/push-docker.sh
+        - run:
+            name: Re-run Docker Push if fail
+            command: |
+                sleep 20
+                ./scripts/push-docker.sh
+            when: on_fail
