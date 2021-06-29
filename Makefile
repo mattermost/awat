@@ -23,3 +23,7 @@ build-image:   ## Build the docker image for the AWAT
 	docker build \
 	. -f build/Dockerfile -t $(AWAT_IMAGE) 
 # --no-cache
+
+test: build
+	@echo Running tests
+	go test ./...

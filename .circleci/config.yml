@@ -45,8 +45,16 @@ jobs:
                 ./scripts/push-docker.sh
             when: on_fail
 
+    test:
+        executor:
+          name: default
+        steps:
+          - checkout
+          - run: make test
+
 workflows:
   version: 2
   ci-build:
     jobs:
+    - test
     - push-docker-pr
