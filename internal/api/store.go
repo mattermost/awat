@@ -1,3 +1,7 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE for license information.
+//
+
 package api
 
 import "github.com/mattermost/awat/model"
