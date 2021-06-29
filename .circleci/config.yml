@@ -21,6 +21,7 @@ jobs:
       steps:
       - checkout
       - run: ./scripts/verify-boilerplate.sh
+
     push-docker-pr:
         executor:
             name: default
@@ -64,4 +65,8 @@ workflows:
     jobs:
     - check-boilerplate
     - test
-    - push-docker-pr
+    - push-docker-pr:
+        context: matterbuild-docker
+        requires:
+          - test
+          - check-boilerplate
