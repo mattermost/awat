@@ -15,6 +15,12 @@ aliases:
       - "/go/pkg/mod"
 
 jobs:
+    check-boilerplate:
+      executor:
+        name: default
+      steps:
+      - checkout
+      - run: ./scripts/verify-boilerplate.sh
     push-docker-pr:
         executor:
             name: default
@@ -56,5 +62,6 @@ workflows:
   version: 2
   ci-build:
     jobs:
+    - check-boilerplate
     - test
     - push-docker-pr
