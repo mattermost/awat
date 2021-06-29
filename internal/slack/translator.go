@@ -204,7 +204,7 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 		if err != nil {
 			logger.
 				WithError(err).
-				Error("failed to copy attachment %s", attachment.Name())
+				Errorf("failed to copy attachment %s", attachment.Name())
 			continue
 		}
 	}
