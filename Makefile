@@ -1,7 +1,7 @@
 # Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
 # See LICENSE.txt for license information.
 
-AWAT_IMAGE ?= mattermost/mattermost-cloud-awat:test
+AWAT_IMAGE ?= mattermost/awat:test
 
 BUILD_HASH = $(shell git rev-parse HEAD)
 LDFLAGS += -X "model.BuildHash=$(BUILD_HASH)"
