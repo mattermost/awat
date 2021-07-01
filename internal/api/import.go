@@ -1,3 +1,7 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package api
 
 import (
@@ -147,7 +151,7 @@ func handleCompleteImport(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	imp, err := c.Store.GetImport(completed.ID)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to look up Import %s", completed.ID)
+		c.Logger.WithError(err).Errorf("failed to look up Import %s", completed.ID)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

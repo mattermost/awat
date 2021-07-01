@@ -1,4 +1,4 @@
-# Copyright (c) 2015-present Mattermost, Inc. All Rights Reserved.
+# Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
 # See LICENSE.txt for license information.
 ARG DOCKER_BUILD_IMAGE=golang:1.15
 ARG DOCKER_BASE_IMAGE=alpine:3.12

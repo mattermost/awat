@@ -1,3 +1,7 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package slack
 
 import (
@@ -204,7 +208,7 @@ func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attach
 		if err != nil {
 			logger.
 				WithError(err).
-				Error("failed to copy attachment %s", attachment.Name())
+				Errorf("failed to copy attachment %s", attachment.Name())
 			continue
 		}
 	}

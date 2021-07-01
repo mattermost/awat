@@ -1,3 +1,7 @@
+// Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
+// See LICENSE.txt for license information.
+//
+
 package slack
 
 import (
@@ -156,7 +160,7 @@ func processSingleFile(logger logrus.FieldLogger, w *zip.Writer, file *SlackFile
 	// Save the file to the output zip file.
 	_, err = io.Copy(outFile, response.Body)
 	if err != nil {
-		return errors.Wrapf(err, "failed to write the downloaded file to the output archive: %s")
+		return errors.Wrapf(err, "failed to write the downloaded file to the output archive: %s", outputPath)
 	}
 
 	// Success at last.
