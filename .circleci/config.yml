@@ -53,6 +53,23 @@ jobs:
             when: on_fail
 
     test:
+        docker:
+        - image: circleci/golang:1.16.2
+          environment:
+            CLOUD_DATABASE=postgres://cloud_test@localhost:5432/cloud_test?sslmode=disable
+        - image: circleci/postgres:11.2-alpine
+          environment:
+            POSTGRES_USER: awat_test
+            POSTGRES_DB: awat_test
+        - image: minio/minio:RELEASE.2021-06-17T00-10-46Z-28-gac7697426
+          environment:
+          - MINIO_ROOT_USER=minio
+          - MINIO_ROOT_PASSWORD=miniostorage
+          command:
+          - server
+          - /tmp/
+          - --console-address
+          - :8888
         executor:
           name: default
         steps:
