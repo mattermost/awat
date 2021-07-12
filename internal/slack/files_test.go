@@ -19,7 +19,7 @@ import (
 // TODO make it so that this doesn't actually reach out to Slack's servers..
 // but it's only a few MB and it's public and probably nobody will notice or care
 func TestFetchAttachedFiles(t *testing.T) {
-	tempFile, err := ioutil.TempFile(os.TempDir(), "awat-slack-unittest")
+	tempFile, err := ioutil.TempFile(os.TempDir(), "awat-slack-test-attached-files")
 	require.NoError(t, err)
 	logger := logrus.New()
 
