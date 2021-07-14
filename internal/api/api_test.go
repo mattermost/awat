@@ -167,6 +167,30 @@ func TestImports(t *testing.T) {
 		assert.Equal(t, importID, imprt.ID)
 	})
 
+	t.Run("fetch an import by Translation ID", func(t *testing.T) {
+		importID := "importID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetImportsByTranslation(translationID).
+			Return([]*model.Import{{ID: importID, TranslationID: translationID}}, nil).
+			Times(1)
+
+		store.EXPECT().
+			GetTranslation(translationID).
+			Return(&model.Translation{ID: translationID}, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/translation/%s/import", ts.URL, translationID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		imports, err := model.NewImportStatusListFromReader(resp.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, imports)
+		assert.Equal(t, importID, imports[0].ID)
+	})
+
 	t.Run("encounter an error from the db", func(t *testing.T) {
 		importID := model.NewID()
 		store.EXPECT().
