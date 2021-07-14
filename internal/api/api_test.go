@@ -91,6 +91,34 @@ func TestTranslations(t *testing.T) {
 		assert.Equal(t, 1, len(translations))
 		assert.Equal(t, translationID, translations[0].ID)
 	})
+
+	t.Run("start a new translation", func(t *testing.T) {
+		store.EXPECT().
+			StoreTranslation(
+				// a more specific expectation could be applied here, but it
+				// doesn't seem worth the time to define a Matcher and get it
+				// all working just to ignore the nondeterministic ID that's
+				// passed to this function because the ID is generated at
+				// runtime
+				gomock.Any(),
+			).
+			Return(nil).
+			Times(1)
+
+		resp, err := http.Post(fmt.Sprintf("%s/translate", ts.URL), "application/json",
+			strings.NewReader(
+				`{"Type": "slack", "InstallationID": "installationID", "Archive": "foo.zip", "Team": "teamname"}`,
+			))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+
+		translation, err := model.NewTranslationStatusFromReader(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, "foo.zip", translation.Resource)
+		assert.Equal(t, "teamname", translation.Team)
+		assert.Equal(t, "installationID", translation.InstallationID)
+	})
+
 }
 
 func TestImports(t *testing.T) {
