@@ -22,7 +22,7 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
-func TestGetTranslations(t *testing.T) {
+func TestTranslations(t *testing.T) {
 	logger := MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
@@ -93,7 +93,7 @@ func TestGetTranslations(t *testing.T) {
 	})
 }
 
-func TestGetImports(t *testing.T) {
+func TestImports(t *testing.T) {
 	logger := MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
@@ -175,6 +175,33 @@ func TestGetImports(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(imports))
 		assert.Equal(t, importID, imports[0].ID)
+	})
+
+	t.Run("start an import", func(t *testing.T) {
+		importID := "importID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetAndClaimNextReadyImport("provisionerID").
+			Return(&model.Import{ID: importID, TranslationID: translationID}, nil).
+			Times(1)
+
+		store.EXPECT().
+			GetTranslation(translationID).
+			Return(&model.Translation{ID: translationID}, nil).
+			Times(1)
+
+		resp, err := http.Post(fmt.Sprintf("%s/import", ts.URL), "application/json",
+			strings.NewReader(
+				`{"ProvisionerID":"provisionerID"}`,
+			))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		imprt, err := model.NewImportStatusFromReader(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, importID, imprt.ID)
+		assert.Equal(t, "import-requested", imprt.State)
 	})
 }
 
