@@ -47,7 +47,6 @@ func TestGetTranslations(t *testing.T) {
 
 	t.Run("fetch a translation successfully", func(t *testing.T) {
 		translationID := model.NewID()
-		// translation :=
 		store.EXPECT().
 			GetTranslation(translationID).
 			Return(&model.Translation{ID: translationID}, nil).
@@ -64,7 +63,6 @@ func TestGetTranslations(t *testing.T) {
 
 	t.Run("encounter an error from the db", func(t *testing.T) {
 		translationID := model.NewID()
-		// translation :=
 		store.EXPECT().
 			GetTranslation(translationID).
 			Return(nil, errors.New("problem talking to database")).
@@ -77,7 +75,6 @@ func TestGetTranslations(t *testing.T) {
 
 	t.Run("fetch all translations", func(t *testing.T) {
 		translationID := model.NewID()
-		// translation :=
 		store.EXPECT().
 			GetAllTranslations().
 			Return([]*model.Translation{
@@ -93,6 +90,91 @@ func TestGetTranslations(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(translations))
 		assert.Equal(t, translationID, translations[0].ID)
+	})
+}
+
+func TestGetImports(t *testing.T) {
+	logger := MakeLogger(t)
+	mockController := gomock.NewController(t)
+	store := mock_api.NewMockStore(mockController)
+	router := mux.NewRouter()
+	Register(router, &Context{
+		Store:  store,
+		Logger: logger,
+	})
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	t.Run("unknown import", func(t *testing.T) {
+		store.EXPECT().
+			GetImport("bogusID").
+			Return(nil, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/import/bogusID", ts.URL))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("fetch an import successfully", func(t *testing.T) {
+		importID := "importID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetImport(importID).
+			Return(&model.Import{ID: importID, TranslationID: translationID}, nil).
+			Times(1)
+
+		store.EXPECT().
+			GetTranslation(translationID).
+			Return(&model.Translation{ID: translationID}, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/import/%s", ts.URL, importID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		imprt, err := model.NewImportStatusFromReader(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, importID, imprt.ID)
+	})
+
+	t.Run("encounter an error from the db", func(t *testing.T) {
+		importID := model.NewID()
+		store.EXPECT().
+			GetImport(importID).
+			Return(nil, errors.New("problem talking to database")).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/import/%s", ts.URL, importID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("fetch all imports", func(t *testing.T) {
+		importID := model.NewID()
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetAllImports().
+			Return([]*model.Import{
+				{ID: importID, TranslationID: translationID},
+			}, nil).
+			Times(1)
+
+		store.EXPECT().
+			GetTranslation(translationID).
+			Return(&model.Translation{ID: translationID}, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/imports", ts.URL))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		imports, err := model.NewImportStatusListFromReader(resp.Body)
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(imports))
+		assert.Equal(t, importID, imports[0].ID)
 	})
 }
 
