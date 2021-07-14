@@ -294,6 +294,34 @@ func TestImports(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
+
+	t.Run("release lock on a locked Import", func(t *testing.T) {
+		importID := "importID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetImport(importID).
+			Return(
+				&model.Import{
+					ID:            importID,
+					TranslationID: translationID},
+				nil).
+			Times(1)
+
+		store.EXPECT().
+			UpdateImport(
+				&model.Import{
+					ID:            importID,
+					LockedBy:      "",
+					TranslationID: translationID}).
+			Return(nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/import/%s/release", ts.URL, importID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	})
 }
 
 // MakeLogger creates a log.FieldLogger that routes to tb.Log.
