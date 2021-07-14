@@ -203,6 +203,34 @@ func TestImports(t *testing.T) {
 		assert.Equal(t, importID, imprt.ID)
 		assert.Equal(t, "import-requested", imprt.State)
 	})
+
+	t.Run("mark an import as completed", func(t *testing.T) {
+		importID := "importID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetImport(importID).
+			Return(&model.Import{ID: importID, TranslationID: translationID}, nil).
+			Times(1)
+
+		store.EXPECT().
+			UpdateImport(&model.Import{ID: importID, CompleteAt: 1000, Error: "", TranslationID: translationID}).
+			Return(nil).
+			Times(1)
+
+		req, err := http.NewRequest("PUT", fmt.Sprintf("%s/import", ts.URL),
+			strings.NewReader(
+				`{"ID":"importID", "CompleteAt": 1000, "Error": ""}`,
+			))
+		require.NoError(t, err)
+
+		req.Header.Add("content-type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
 }
 
 // MakeLogger creates a log.FieldLogger that routes to tb.Log.
