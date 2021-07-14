@@ -219,7 +219,9 @@ func TestImports(t *testing.T) {
 			Return(&model.Translation{ID: translationID}, nil).
 			Times(1)
 
-		resp, err := http.Post(fmt.Sprintf("%s/import", ts.URL), "application/json",
+		resp, err := http.Post(
+			fmt.Sprintf("%s/import", ts.URL),
+			"application/json",
 			strings.NewReader(
 				`{"ProvisionerID":"provisionerID"}`,
 			))
@@ -238,11 +240,20 @@ func TestImports(t *testing.T) {
 
 		store.EXPECT().
 			GetImport(importID).
-			Return(&model.Import{ID: importID, TranslationID: translationID}, nil).
+			Return(
+				&model.Import{
+					ID:            importID,
+					TranslationID: translationID},
+				nil).
 			Times(1)
 
 		store.EXPECT().
-			UpdateImport(&model.Import{ID: importID, CompleteAt: 1000, Error: "", TranslationID: translationID}).
+			UpdateImport(
+				&model.Import{
+					ID:            importID,
+					CompleteAt:    1000,
+					Error:         "",
+					TranslationID: translationID}).
 			Return(nil).
 			Times(1)
 
