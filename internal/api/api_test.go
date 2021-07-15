@@ -119,6 +119,24 @@ func TestTranslations(t *testing.T) {
 		assert.Equal(t, "installationID", translation.InstallationID)
 	})
 
+	t.Run("get a translation by Installation ID", func(t *testing.T) {
+		installationID := "installationID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetTranslationsByInstallation(installationID).
+			Return([]*model.Translation{{ID: translationID, InstallationID: installationID}}, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/installation/translation/%s", ts.URL, installationID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		translations, err := model.NewTranslationStatusListFromReader(resp.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, translations)
+		assert.Equal(t, translationID, translations[0].ID)
+	})
 }
 
 func TestImports(t *testing.T) {
@@ -320,7 +338,31 @@ func TestImports(t *testing.T) {
 		resp, err := http.Get(fmt.Sprintf("%s/import/%s/release", ts.URL, importID))
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	})
 
+	t.Run("get an import by Installation ID", func(t *testing.T) {
+		importID := "importID"
+		installationID := "installationID"
+		translationID := "translationID"
+
+		store.EXPECT().
+			GetImportsByInstallation(installationID).
+			Return([]*model.Import{{ID: importID, TranslationID: translationID}}, nil).
+			Times(1)
+
+		store.EXPECT().
+			GetTranslation(translationID).
+			Return(&model.Translation{ID: translationID}, nil).
+			Times(1)
+
+		resp, err := http.Get(fmt.Sprintf("%s/installation/import/%s", ts.URL, installationID))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+		imports, err := model.NewImportStatusListFromReader(resp.Body)
+		require.NoError(t, err)
+		require.NotEmpty(t, imports)
+		assert.Equal(t, importID, imports[0].ID)
 	})
 }
 
