@@ -5,13 +5,15 @@
 package main
 
 import (
+	"os"
+
 	"github.com/mattermost/awat/internal/store"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	schemaCmd.AddCommand(schemaMigrateCmd)
-	schemaCmd.PersistentFlags().String("database", "postgres://cloud.db", "The database backing the AWAT server.")
+	schemaCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "The database backing the AWAT server.")
 }
 
 var schemaCmd = &cobra.Command{
@@ -35,6 +37,9 @@ var schemaMigrateCmd = &cobra.Command{
 }
 
 func sqlStore(command *cobra.Command) (*store.SQLStore, error) {
-	database, _ := command.Flags().GetString(databaseFlag)
+	var database string
+	if database = os.Getenv("AWAT_DATABASE"); database == "" {
+		database, _ = command.Flags().GetString(databaseFlag)
+	}
 	return store.New(database, logger)
 }

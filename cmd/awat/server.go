@@ -36,7 +36,7 @@ func init() {
 	serverCmd.PersistentFlags().String(listenFlag, "localhost:8077", "Local interface and port to listen on")
 	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found")
 	serverCmd.PersistentFlags().String(workingDirectory, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
-	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
+	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use (override with AWAT_DATABASE environment variable)")
 	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
 	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
