@@ -14,16 +14,16 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	mock_api "github.com/mattermost/awat/internal/mocks/api"
+	"github.com/mattermost/awat/internal/testlib"
 	"github.com/mattermost/awat/model"
 )
 
 func TestTranslations(t *testing.T) {
-	logger := MakeLogger(t)
+	logger := testlib.MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
 	router := mux.NewRouter()
@@ -140,7 +140,7 @@ func TestTranslations(t *testing.T) {
 }
 
 func TestImports(t *testing.T) {
-	logger := MakeLogger(t)
+	logger := testlib.MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
 	router := mux.NewRouter()
@@ -308,8 +308,6 @@ func TestImports(t *testing.T) {
 		req.Header.Add("content-type", "application/json")
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
-
-		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
@@ -364,23 +362,4 @@ func TestImports(t *testing.T) {
 		require.NotEmpty(t, imports)
 		assert.Equal(t, importID, imports[0].ID)
 	})
-}
-
-// MakeLogger creates a log.FieldLogger that routes to tb.Log.
-func MakeLogger(tb testing.TB) log.FieldLogger {
-	logger := log.New()
-	logger.SetOutput(&testingWriter{tb})
-	logger.SetLevel(log.TraceLevel)
-
-	return logger
-}
-
-// testingWriter is an io.Writer that writes through t.Log.
-type testingWriter struct {
-	tb testing.TB
-}
-
-func (tw *testingWriter) Write(b []byte) (int, error) {
-	tw.tb.Log(strings.TrimSpace(string(b)))
-	return len(b), nil
 }
