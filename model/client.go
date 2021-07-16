@@ -55,9 +55,10 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 	}
 	defer closeBody(resp)
 	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return nil, nil
 	case http.StatusOK:
 		return NewTranslationStatusFromReader(resp.Body)
-
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
 	}
@@ -132,6 +133,26 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return NewTranslationStatusListFromReader(resp.Body)
+	case http.StatusNotFound:
+		return nil, nil
+
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetAllImports gets all Imports from the API and returns
+// them as a JSON list
+func (c *Client) GetAllImports() ([]*ImportStatus, error) {
+	resp, err := c.doGet(c.buildURL("/imports"))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewImportStatusListFromReader(resp.Body)
 	case http.StatusNotFound:
 		return nil, nil
 
