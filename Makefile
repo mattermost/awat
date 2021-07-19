@@ -27,3 +27,6 @@ build-image:   ## Build the docker image for the AWAT
 test: build
 	@echo Running tests
 	go test ./...
+
+mocks:
+	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go

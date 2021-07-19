@@ -21,7 +21,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 	rootRouter.Handle("/import", addContext(handleStartImport)).Methods("POST")
 	rootRouter.Handle("/import", addContext(handleCompleteImport)).Methods("PUT")
 	rootRouter.Handle("/import/{id}", addContext(handleGetImport)).Methods("GET")
-	rootRouter.Handle("/import/{id}/release", addContext(handleGetImport)).Methods("GET")
+	rootRouter.Handle("/import/{id}/release", addContext(handleReleaseLockOnImport)).Methods("GET")
 	rootRouter.Handle("/imports", addContext(handleListImports)).Methods("GET")
 
 	rootRouter.Handle("/installation/translation/{id}", addContext(handleGetTranslationStatusesByInstallation)).Methods("GET")
