@@ -73,15 +73,15 @@ type ImportStatus struct {
 // State determines and returns the current state of the Import given
 // its metadata
 func (i *Import) State() string {
+	if i.CompleteAt != 0 {
+		return ImportStateComplete
+	}
+
 	if i.StartAt == 0 {
 		return ImportStateRequested
 	}
 
-	if i.CompleteAt == 0 {
-		return ImportStateInProgress
-	}
-
-	return ImportStateComplete
+	return ImportStateInProgress
 }
 
 // NewImportWorkRequestFromReader creates a ImportWorkRequest from a
