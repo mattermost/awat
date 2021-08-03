@@ -72,6 +72,7 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 	err := sqlStore.selectBuilder(sqlStore.db, &imports,
 		importSelect.
 			Where("StartAt = 0").
+			Where("CompleteAt = 0").
 			Where("LockedBy = ''").
 			OrderBy("CreateAt ASC").
 			Limit(1),
