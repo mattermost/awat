@@ -30,3 +30,11 @@ test: build
 
 mocks:
 	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go
+
+e2e:
+	@echo Warning!
+	@echo These tests won\'t work without the following environment variables pointing to prepared services:
+	@echo PROVISIONER_URL to point to where the Provisioner is listening
+	@echo AWAT_BUCKET to the address of the S3 bucket
+	@echo AWAT_DATABASE to the address of the Postgres instance
+	go test -tags e2e ./test/e2e -timeout 15m
