@@ -58,7 +58,6 @@ func handleReleaseLockOnImport(c *Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	imprt.LockedBy = ""
-	imprt.StartAt = 0
 
 	err = c.Store.UpdateImport(imprt)
 	if err != nil {
