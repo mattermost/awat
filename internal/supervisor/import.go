@@ -42,7 +42,7 @@ func (s *ImportSupervisor) Start() {
 			if err != nil {
 				s.logger.WithError(err).Error("failed an operation while supervising imports")
 			}
-			time.Sleep(60 * time.Second)
+			time.Sleep(30 * time.Second)
 		}
 	}()
 }
@@ -54,19 +54,6 @@ func (s *ImportSupervisor) supervise() error {
 	}
 
 	for _, i := range imports {
-		if (time.Now().UnixNano()/1000)-i.StartAt < time.Second.Milliseconds()*10 {
-			// if the above condition is true, the Import was claimed to be
-			// started very recently (less than 10 seconds ago) and it's
-			// possible that the Provisioner hasn't changed the state on the
-			// corresponding Installation yet
-
-			// the first thing the Provisioner does after getting some work
-			// is to lock the Installation, so the window for a race
-			// condition should be a sub-second window and this pause should
-			// be reliable if slightly overkill
-			continue
-		}
-
 		translation, err := s.store.GetTranslation(i.TranslationID)
 		if err != nil {
 			s.logger.WithError(err).Warnf("failed to look up Translation %s", i.TranslationID)
@@ -88,16 +75,50 @@ func (s *ImportSupervisor) supervise() error {
 			continue
 		}
 
-		// if the State is stable and the Installation is slightly old, we
-		// can safely assume that an import happened and was completed
-		if installation.State == "stable" {
-			i.CompleteAt = time.Now().Unix() / 1000
+		if isImportComplete(installation, i) {
+			i.CompleteAt = model.Timestamp()
 			err := s.store.UpdateImport(i)
 			if err != nil {
-				s.logger.WithError(err).Warnf("Import %s was done but couldn't be marked as such", i.ID)
+				s.logger.WithError(err).Warnf("Import %s was complete but couldn't be marked as such", i.ID)
 			}
+
+			key := fmt.Sprintf("%s.zip", i.TranslationID)
+			cfg, err := config.LoadDefaultConfig(context.TODO())
+			if err != nil {
+				s.logger.WithError(err).Warnf("Failed to clean up s3://%s/%s", s.bucket, key)
+				return err
+			}
+
+			ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
+			defer cancelFunc()
+
+			client := s3.NewFromConfig(cfg)
+			_, err = client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: &s.bucket,
+				Key:    &key,
+			})
+
+			return err
 		}
 	}
 
 	return nil
+}
+
+func isImportComplete(installation *cloud.InstallationDTO, i *model.Import) bool {
+	switch {
+	case
+		// go ahead and mark Imports against Deleted Installations as
+		// complete
+		installation.State == cloud.InstallationStateDeleted:
+	case
+		// if the State of the Installation is stable and the Import was
+		// started at least a little while ago, we can safely assume that
+		// an import happened and was completed
+		installation.State == cloud.InstallationStateStable &&
+			i.StartAt < (model.Timestamp()-(time.Minute.Nanoseconds()/1000)):
+	default:
+		return false
+	}
+	return true
 }

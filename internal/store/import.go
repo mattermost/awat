@@ -175,7 +175,9 @@ func (sqlStore *SQLStore) GetImportsByTranslation(id string) ([]*model.Import, e
 func (sqlStore *SQLStore) GetImportsInProgress() ([]*model.Import, error) {
 	imprts := &[]*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, imprts,
-		importSelect.Where("CompleteAt = 0"),
+		importSelect.
+			Where("CompleteAt = 0").
+			Where("StartAt != 0"),
 	)
 	if err != nil {
 		return nil, err
