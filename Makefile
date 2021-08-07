@@ -33,8 +33,10 @@ mocks:
 
 e2e:
 	@echo Warning!
-	@echo These tests won\'t work without the following environment variables pointing to prepared services:
-	@echo PROVISIONER_URL to point to where the Provisioner is listening
-	@echo AWAT_BUCKET to the address of the S3 bucket
-	@echo AWAT_DATABASE to the address of the Postgres instance
-	go test -tags e2e ./test/e2e -timeout 15m
+	@echo These tests won\'t work without the following environment variables:
+	@echo AWAT_E2E_INSTALLATION_DOMAIN set to the domain to use for testing installations, e.g. \".dev.cloud.mattermost.com\"
+	@echo AWAT_E2E_URL set to the AWAT endpoint
+	@echo AWAT_E2E_PROVISIONER_URL set to the Provisioner endpoint
+	@echo AWAT_E2E_BUCKET set to the address of the S3 bucket
+
+	go test -tags e2e -count 1 ./test/e2e -timeout 30m
