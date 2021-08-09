@@ -81,7 +81,7 @@ func (s *ImportSupervisor) supervise() error {
 			continue
 		}
 
-		if isImportComplete(installation, i) {
+		if startedImportIsComplete(installation, i) {
 			i.CompleteAt = model.Timestamp()
 			err := s.store.UpdateImport(i)
 			if err != nil {
@@ -111,7 +111,9 @@ func (s *ImportSupervisor) supervise() error {
 	return nil
 }
 
-func isImportComplete(installation *cloud.InstallationDTO, i *model.Import) bool {
+// startedImportIsComplete returns true if an Import with a nonzero
+// StartAt value has been completed, and false otherwise.
+func startedImportIsComplete(installation *cloud.InstallationDTO, i *model.Import) bool {
 	switch {
 	case
 		// go ahead and mark Imports against Deleted Installations as
