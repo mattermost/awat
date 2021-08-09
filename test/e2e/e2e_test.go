@@ -6,9 +6,14 @@
 package e2e
 
 /*
-"gopls.env": {
-        "GOFLAGS": "-tags=e2e"
-    },
+   The following line makes this package work with LSP in Emacs
+
+	 (setq lsp-go-build-flags ["-tags=e2e"])
+
+   To make this file work properly with LSP in VSCode, set the following in settings.json:
+	 "gopls.env": {
+				"GOFLAGS": "-tags=e2e"
+		},
 */
 
 import (
@@ -29,7 +34,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const slackArchive = "../dummy-slack-workspace-archive.zip"
+const (
+	slackArchive = "../dummy-slack-workspace-archive.zip"
+	slackTeam    = "slack-import"
+)
 
 type environment struct {
 	awatURL        string
@@ -59,7 +67,7 @@ func TestAWAT(t *testing.T) {
 			IncludeGroupConfig:          false,
 			IncludeGroupConfigOverrides: false,
 		})
-	require.Nil(t, err)
+	require.NoError(t, err)
 	// this is just a best-effort attempt to clean up from old test runs
 	// so just move on if it fails
 	if err == nil {
@@ -75,6 +83,10 @@ func TestAWAT(t *testing.T) {
 			OwnerID:   "awat-e2e",
 			DNS:       fmt.Sprintf("awat-e2e-%s%s", model.NewID(), env.testDomain),
 			Filestore: cloud.InstallationFilestoreBifrost,
+			Version:   "793e006",
+			// TODO change this to EE
+			// and a stable version not a random commit on my branch
+			Image: "mattermost/mattermost-team-edition",
 		})
 	require.NoError(t, err)
 	require.NotNil(t, installation)
@@ -109,7 +121,7 @@ func TestAWAT(t *testing.T) {
 			Type:           "slack",
 			InstallationID: installation.ID,
 			Archive:        key,
-			Team:           "e2e",
+			Team:           slackTeam,
 		})
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateRequested, ts.State)
@@ -161,12 +173,6 @@ func TestAWAT(t *testing.T) {
 				t.Fail()
 			}
 
-			// this is a race, but it's hopefully one that we'll never lose
-			// I think it is highly unlikely that we will ever lose this
-			// particular race (the import has to be completed before we
-			// call GetInstallation in order for us to lose the race), but
-			// if this test gets flaky here, this should be removed and
-			// rethought
 			require.Equal(t, cloud.InstallationStateImportInProgress, installation.State)
 			break
 		}
@@ -226,7 +232,7 @@ func TestAWAT(t *testing.T) {
 	t.Logf("team search result:\n%s", output)
 	_ = json.Unmarshal(output, &teamSearch)
 	require.NotEmpty(t, teamSearch)
-	assert.Equal(t, "e2e", teamSearch[0].Name)
+	assert.Equal(t, slackTeam, teamSearch[0].Name)
 
 	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
 		[]string{
@@ -253,6 +259,55 @@ func TestAWAT(t *testing.T) {
 		t.Logf("%+v", u)
 		assert.Equal(t, correctUser, u.Username)
 	}
+
+	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--local",
+			"--format", "json",
+			"post", "list", fmt.Sprintf("%s:testing", slackTeam),
+		})
+
+	t.Logf("post list output:\n%s", output)
+	postListResult, err := extractPosts(output)
+	t.Logf("postListResult:\n%#v", postListResult)
+	require.NoError(t, err)
+	assert.NotEmpty(t, postListResult)
+	assert.Equal(t, 12, len(postListResult))
+	assert.Equal(t, "short message", postListResult[0].Message)
+}
+
+func extractPosts(input []byte) ([]post, error) {
+	input = []byte(strings.TrimSpace(string(input)))
+	posts := []post{}
+	for len(input) > 0 {
+		originalLength := len(input)
+		for i := 1; i <= len(input); i++ { // this is really brute force but it'll do
+			var post post
+			err := json.Unmarshal(input[:i], &post)
+			if err == nil {
+				posts = append(posts, post)
+				input = input[i:]
+				break
+			}
+		}
+		if len(input) == originalLength {
+			return nil, errors.Errorf("couldn't parse full input, %d characters left, %d originally", len(input), originalLength)
+		}
+	}
+	return posts, nil
+}
+
+type post struct {
+	Message  string        `json:"message"`
+	Metadata *postMetadata `json:"metadata"`
+}
+
+type postMetadata struct {
+	Files []*postFiles `json:"files"`
+}
+
+type postFiles struct {
+	Name string `json:"name"`
 }
 
 type user struct {
@@ -369,7 +424,7 @@ func ensureArtifactInBucket(bucketName string) error {
 		return errors.Errorf("bucket %s was empty", bucketName)
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*25)
+	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Minute)
 	defer cancelFunc()
 
 	for p.HasMorePages() {
