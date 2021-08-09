@@ -171,6 +171,11 @@ func TestAWAT(t *testing.T) {
 					IncludeGroupConfig:          false,
 					IncludeGroupConfigOverrides: false,
 				})
+			if err != nil && err.Error() == "failed with status code 409" {
+				// the Installation is locked, probably by one of the
+				// operations that is being tested, ha!
+				continue
+			}
 			require.NoError(t, err)
 			if installation == nil {
 				t.Log("wtf? the installation should exist")
