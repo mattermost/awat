@@ -79,7 +79,7 @@ var serverCmd = &cobra.Command{
 		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
 		translationSupervisor.Start()
 
-		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, provisionerURL)
+		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, bucket, provisionerURL)
 		importSupervisor.Start()
 
 		router := mux.NewRouter()

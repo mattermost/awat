@@ -5,8 +5,12 @@
 package supervisor
 
 import (
+	"context"
+	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -17,6 +21,7 @@ type ImportSupervisor struct {
 	logger log.FieldLogger
 	store  importStore
 	cloud  *cloud.Client
+	bucket string
 }
 
 type importStore interface {
@@ -25,12 +30,13 @@ type importStore interface {
 	UpdateImport(imp *model.Import) error
 }
 
-func NewImportSupervisor(store importStore, logger log.FieldLogger, provisionerURL string) *ImportSupervisor {
+func NewImportSupervisor(store importStore, logger log.FieldLogger, bucket, provisionerURL string) *ImportSupervisor {
 	cloudClient := cloud.NewClient(provisionerURL)
 	return &ImportSupervisor{
 		logger: logger,
 		store:  store,
 		cloud:  cloudClient,
+		bucket: bucket,
 	}
 }
 
