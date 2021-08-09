@@ -18,8 +18,9 @@ Running the end-to-end tests requires the following infrastructure be present be
 - An empty S3 bucket
 
 Set the following environment variables and run `make e2e`:
-- `PROVISIONER_URL` to point to where the Provisioner is listening
-- `AWAT_BUCKET` to the address of the S3 bucket
-- `AWAT_DATABASE` to the address of the Postgres instance
+- `AWAT_E2E_INSTALLATION_DOMAIN` set to the domain to use for testing installations, e.g. ".dev.cloud.mattermost.com"
+- `AWAT_E2E_URL` set to the AWAT endpoint
+- `AWAT_E2E_PROVISIONER_URL` set to the Provisioner endpoint
+- `AWAT_E2E_BUCKET` set to the address of the S3 bucket
 
 **NOTE**: The database provided by `AWAT_DATABASE` must not exist yet and the bucket at `AWAT_BUCKET` must be empty
