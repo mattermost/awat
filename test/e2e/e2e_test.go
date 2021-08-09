@@ -110,6 +110,10 @@ func TestAWAT(t *testing.T) {
 		if installation.State == cloud.InstallationStateStable {
 			break
 		}
+		if installation.State == cloud.InstallationStateCreationNoCompatibleClusters {
+			t.Log("No compatible clusters on which to run. Did cleanup fail?")
+			t.FailNow()
+		}
 		time.Sleep(time.Second)
 	}
 	require.Equal(t, installation.State, cloud.InstallationStateStable)
