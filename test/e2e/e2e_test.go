@@ -394,7 +394,6 @@ func checkUsers(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstal
 	err = json.Unmarshal(output, &userSearchResult)
 	require.NoError(t, err)
 	require.NotEmpty(t, userSearchResult)
-	t.Logf("user search result:\n%+v", userSearchResult)
 	for _, u := range userSearchResult {
 		if u.IsBot {
 			continue
