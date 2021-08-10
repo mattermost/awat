@@ -22,5 +22,3 @@ Set the following environment variables and run `make e2e`:
 - `AWAT_E2E_URL` set to the AWAT endpoint
 - `AWAT_E2E_PROVISIONER_URL` set to the Provisioner endpoint
 - `AWAT_E2E_BUCKET` set to the address of the S3 bucket
-
-**NOTE**: The database provided by `AWAT_DATABASE` must not exist yet and the bucket at `AWAT_BUCKET` must be empty
