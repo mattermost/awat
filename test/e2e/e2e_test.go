@@ -111,7 +111,7 @@ func TestSlackTranslationAndImport(t *testing.T) {
 
 	t.Log("wait for the Installation to become stable")
 
-	for i := 0; i < 600; i++ {
+	retryFor(time.Minute*10, func() bool {
 		installation, err = provisioner.GetInstallation(installation.ID,
 			&cloud.GetInstallationRequest{
 				IncludeGroupConfig:          false,
@@ -119,14 +119,14 @@ func TestSlackTranslationAndImport(t *testing.T) {
 			})
 		require.NoError(t, err)
 		if installation.State == cloud.InstallationStateStable {
-			break
+			return true
 		}
 		if installation.State == cloud.InstallationStateCreationNoCompatibleClusters {
 			t.Log("No compatible clusters on which to run. Did cleanup fail?")
 			t.FailNow()
 		}
-		time.Sleep(time.Second)
-	}
+		return false
+	})
 	require.Equal(t, installation.State, cloud.InstallationStateStable)
 
 	t.Logf("start a new translation into installation %s", installation.ID)
