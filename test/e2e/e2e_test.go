@@ -47,7 +47,9 @@ type environment struct {
 	testDomain     string
 }
 
-func TestAWAT(t *testing.T) {
+func TestSlackTranslationAndImport(t *testing.T) {
+	t.Log("validate the environment and gather variables")
+
 	env, err := validatedEnvironment()
 	require.NoError(t, err)
 
@@ -59,6 +61,8 @@ func TestAWAT(t *testing.T) {
 		err = deleteS3Object(env.bucket, key)
 		require.NoError(t, err)
 	}()
+
+	t.Log("clean up the environment from any interrupted tests from a previous run")
 
 	provisioner := cloud.NewClient(env.provisionerURL)
 	oldInstallations, err := provisioner.GetInstallations(
@@ -79,6 +83,9 @@ func TestAWAT(t *testing.T) {
 			}
 		}
 	}
+
+	t.Log("create an Installation into which to run an import")
+
 	installation, err := provisioner.CreateInstallation(
 		&cloud.CreateInstallationRequest{
 			OwnerID:   "awat-e2e",
@@ -92,15 +99,18 @@ func TestAWAT(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, installation)
 	defer func() {
-		for i := 0; i < 600; i++ {
+		retryFor(time.Minute*5, func() bool {
 			err := provisioner.DeleteInstallation(installation.ID)
 			if err != nil {
 				t.Log("nonfatal error deleting an installation during cleanup: " + err.Error())
-				time.Sleep(time.Second)
+				return false
 			}
-			return
-		}
+			return true
+		})
 	}()
+
+	t.Log("wait for the Installation to become stable")
+
 	for i := 0; i < 600; i++ {
 		installation, err = provisioner.GetInstallation(installation.ID,
 			&cloud.GetInstallationRequest{
@@ -119,6 +129,8 @@ func TestAWAT(t *testing.T) {
 	}
 	require.Equal(t, installation.State, cloud.InstallationStateStable)
 
+	t.Logf("start a new translation into installation %s", installation.ID)
+
 	client := model.NewClient(env.awatURL)
 
 	ts, err := client.CreateTranslation(
@@ -130,31 +142,37 @@ func TestAWAT(t *testing.T) {
 		})
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateRequested, ts.State)
-	for i := 0; i < 300; i++ { // lazy retry loop w/ timeout
+
+	t.Logf("wait for translation %s to start", ts.ID)
+
+	retryFor(time.Minute*5, func() bool {
 		ts, err = client.GetTranslationStatus(ts.ID)
 		require.NoError(t, err)
 		if ts.State != model.TranslationStateRequested {
 			require.Equal(t, model.TranslationStateInProgress, ts.State)
-			break
+			return true
 		}
-		time.Sleep(time.Second)
-	}
+		return false
+	})
 
-	for i := 0; i < 300; i++ {
+	t.Logf("wait for translation %s to complete", ts.ID)
+
+	retryFor(time.Minute*5, func() bool {
 		ts, err = client.GetTranslationStatus(ts.ID)
 		require.NoError(t, err)
 		if ts.State != model.TranslationStateInProgress {
 			require.Equal(t, model.TranslationStateComplete, ts.State)
-			break
+			return true
 		}
-		time.Sleep(time.Second)
-	}
-
+		return false
+	})
 	require.NotZero(t, ts.CompleteAt)
 
 	ts, err = client.GetTranslationStatus(ts.ID)
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateComplete, ts.State)
+
+	t.Log("make sure an import is created and wait for it to start")
 
 	importStatusList, err := client.GetImportStatusesByTranslation(ts.ID)
 	require.Equal(t, 1, len(importStatusList))
@@ -163,7 +181,7 @@ func TestAWAT(t *testing.T) {
 		require.Equal(t, model.ImportStateRequested, importStatus.State)
 	}
 
-	for i := 0; i < 600; i++ {
+	retryFor(time.Minute*10, func() bool {
 		importStatus, err = client.GetImportStatus(importStatus.ID)
 		if importStatus.State == model.ImportStateInProgress {
 			installation, err := provisioner.GetInstallation(
@@ -175,7 +193,7 @@ func TestAWAT(t *testing.T) {
 			if err != nil && err.Error() == "failed with status code 409" {
 				// the Installation is locked, probably by one of the
 				// operations that is being tested, ha!
-				continue
+				return false
 			}
 			require.NoError(t, err)
 			if installation == nil {
@@ -184,10 +202,13 @@ func TestAWAT(t *testing.T) {
 			}
 
 			require.Equal(t, cloud.InstallationStateImportInProgress, installation.State)
-			break
+			return true
 		}
-		time.Sleep(time.Second)
-	}
+		return false
+	})
+
+	t.Logf("wait for import %s to complete", importStatus.ID)
+
 	installation, err = provisioner.GetInstallation(
 		importStatus.InstallationID,
 		&cloud.GetInstallationRequest{
@@ -197,7 +218,7 @@ func TestAWAT(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, cloud.InstallationStateImportInProgress, installation.State)
 
-	for i := 0; i < 600; i++ {
+	retryFor(time.Minute*10, func() bool {
 		importStatus, err = client.GetImportStatus(importStatus.ID)
 		if importStatus.State != model.ImportStateInProgress {
 			require.NotZero(t, importStatus.CompleteAt)
@@ -207,10 +228,10 @@ func TestAWAT(t *testing.T) {
 			if model.ImportStateComplete != importStatus.State {
 				t.FailNow()
 			}
-			break
+			return true
 		}
-		time.Sleep(time.Second)
-	}
+		return false
+	})
 	require.Equal(t, model.ImportStateComplete, importStatus.State)
 
 	installation, err = provisioner.GetInstallation(
@@ -222,6 +243,8 @@ func TestAWAT(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, cloud.InstallationStateStable, installation.State)
 
+	t.Log("validate the import data was imported properly")
+
 	clusterInstallations, err := provisioner.GetClusterInstallations(
 		&cloud.GetClusterInstallationsRequest{
 			Paging:         cloud.AllPagesNotDeleted(),
@@ -229,6 +252,8 @@ func TestAWAT(t *testing.T) {
 		})
 	require.Equal(t, 1, len(clusterInstallations))
 	ci := clusterInstallations[0]
+
+	t.Log("check teams")
 
 	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
 		[]string{
@@ -239,7 +264,6 @@ func TestAWAT(t *testing.T) {
 	require.NoError(t, err)
 
 	teamSearch := []*team{}
-	t.Logf("team search result:\n%s", output)
 	_ = json.Unmarshal(output, &teamSearch)
 	require.NotEmpty(t, teamSearch)
 	assert.Equal(t, slackTeam, teamSearch[0].Name)
@@ -250,6 +274,22 @@ func TestAWAT(t *testing.T) {
 			"--local",
 			"user", "list",
 		})
+
+	t.Log("check channels")
+
+	channelSearch := []*channel{}
+	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--format", "json",
+			"--local",
+			"channel", "list", slackTeam,
+		})
+
+	require.NoError(t, err)
+	err = json.Unmarshal(output, &channelSearch)
+	require.NoError(t, err)
+
+	t.Log("check users")
 
 	userSearchResult := []*user{}
 	err = json.Unmarshal(output, &userSearchResult)
@@ -270,6 +310,8 @@ func TestAWAT(t *testing.T) {
 		assert.Equal(t, correctUser, u.Username)
 	}
 
+	t.Log("check posts")
+
 	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
 		[]string{
 			"--local",
@@ -277,34 +319,11 @@ func TestAWAT(t *testing.T) {
 			"post", "list", fmt.Sprintf("%s:testing", slackTeam),
 		})
 
-	t.Logf("post list output:\n%s", output)
 	postListResult, err := extractPosts(output)
-	t.Logf("postListResult:\n%#v", postListResult)
 	require.NoError(t, err)
 	assert.NotEmpty(t, postListResult)
 	assert.Equal(t, 12, len(postListResult))
 	assert.Equal(t, "short message", postListResult[0].Message)
-}
-
-func extractPosts(input []byte) ([]post, error) {
-	input = []byte(strings.TrimSpace(string(input)))
-	posts := []post{}
-	for len(input) > 0 {
-		originalLength := len(input)
-		for i := 1; i <= len(input); i++ { // this is really brute force but it'll do
-			var post post
-			err := json.Unmarshal(input[:i], &post)
-			if err == nil {
-				posts = append(posts, post)
-				input = input[i:]
-				break
-			}
-		}
-		if len(input) == originalLength {
-			return nil, errors.Errorf("couldn't parse full input, %d characters left, %d originally", len(input), originalLength)
-		}
-	}
-	return posts, nil
 }
 
 type post struct {
@@ -329,6 +348,42 @@ type user struct {
 type team struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type channel struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+}
+
+// if the doer returns true, consider it done, and stop retrying
+func retryFor(d time.Duration, doer func() bool) {
+	for i := float64(0); i < d.Seconds(); i++ {
+		if doer() {
+			break
+		}
+		time.Sleep(time.Second)
+	}
+}
+
+func extractPosts(input []byte) ([]post, error) {
+	input = []byte(strings.TrimSpace(string(input)))
+	posts := []post{}
+	for len(input) > 0 {
+		originalLength := len(input)
+		for i := 1; i <= len(input); i++ { // this is really brute force but it'll do
+			var post post
+			err := json.Unmarshal(input[:i], &post)
+			if err == nil {
+				posts = append(posts, post)
+				input = input[i:]
+				break
+			}
+		}
+		if len(input) == originalLength {
+			return nil, errors.Errorf("couldn't parse full input, %d characters left, %d originally", len(input), originalLength)
+		}
+	}
+	return posts, nil
 }
 
 func deleteS3Object(bucket, key string) error {

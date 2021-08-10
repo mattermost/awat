@@ -39,4 +39,4 @@ e2e:
 	@echo AWAT_E2E_PROVISIONER_URL set to the Provisioner endpoint
 	@echo AWAT_E2E_BUCKET set to the address of the S3 bucket
 
-	go test -tags e2e -count 1 ./test/e2e -timeout 30m
+	go test -v -tags e2e -count 1 ./test/e2e -timeout 30m
