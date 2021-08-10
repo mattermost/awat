@@ -41,30 +41,58 @@ const (
 )
 
 type environment struct {
-	awatURL        string
-	bucket         string
-	provisionerURL string
-	testDomain     string
+	awatURL     string
+	bucket      string
+	key         string
+	testDomain  string
+	provisioner *cloud.Client
 }
 
 func TestSlackTranslationAndImport(t *testing.T) {
+	env := setupEnv(t)
+	installation := getInstallation(t, env)
+	client := model.NewClient(env.awatURL)
+	ts := startTranslationAndWaitForItToSucceed(t, client, installation, env)
+	waitForImportToSucceed(t, ts, client, env.provisioner, installation)
+
+	t.Log("validate the import data was imported properly")
+
+	clusterInstallations, err := env.provisioner.GetClusterInstallations(
+		&cloud.GetClusterInstallationsRequest{
+			Paging:         cloud.AllPagesNotDeleted(),
+			InstallationID: installation.ID,
+		})
+	require.NoError(t, err)
+	require.True(t, len(clusterInstallations) > 0)
+	ci := clusterInstallations[0]
+
+	checkTeams(t, env.provisioner, ci)
+	checkChannels(t, env.provisioner, ci)
+	checkUsers(t, env.provisioner, ci)
+	checkPosts(t, env.provisioner, ci)
+}
+
+func setupEnv(t *testing.T) *environment {
 	t.Log("validate the environment and gather variables")
 
 	env, err := validatedEnvironment()
 	require.NoError(t, err)
 
 	err = ensureArtifactInBucket(env.bucket)
+	t.Cleanup(func() {
+		err = deleteS3Object(env.bucket, env.key)
+		require.NoError(t, err)
+	})
 	require.NoError(t, err)
 
-	key := strings.TrimPrefix(slackArchive, "../") // ok this could be more robust but really who cares
-	defer func() {
-		err = deleteS3Object(env.bucket, key)
-		require.NoError(t, err)
-	}()
+	env.key = strings.TrimPrefix(slackArchive, "../") // ok this could be more robust but really who cares
+	t.Log("clean up the environment from any previously interrupted tests")
 
-	t.Log("clean up the environment from any interrupted tests from a previous run")
+	cleanOldInstallations(t, env.provisioner)
+	return env
+}
 
-	provisioner := cloud.NewClient(env.provisionerURL)
+func cleanOldInstallations(t *testing.T, provisioner *cloud.Client) {
 	oldInstallations, err := provisioner.GetInstallations(
 		&cloud.GetInstallationsRequest{
 			Paging:                      cloud.AllPagesNotDeleted(),
@@ -83,10 +111,12 @@ func TestSlackTranslationAndImport(t *testing.T) {
 			}
 		}
 	}
+}
 
+func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
 	t.Log("create an Installation into which to run an import")
 
-	installation, err := provisioner.CreateInstallation(
+	installation, err := env.provisioner.CreateInstallation(
 		&cloud.CreateInstallationRequest{
 			OwnerID:   "awat-e2e",
 			DNS:       fmt.Sprintf("awat-e2e-%s%s", model.NewID(), env.testDomain),
@@ -96,23 +126,27 @@ func TestSlackTranslationAndImport(t *testing.T) {
 			// and a stable version not a random commit on my branch
 			Image: "mattermost/mattermost-team-edition",
 		})
+
+	t.Cleanup(
+		func() {
+			retryFor(time.Minute*5, func() bool {
+				err := env.provisioner.DeleteInstallation(installation.ID)
+				if err != nil {
+					t.Log("nonfatal error deleting an installation during cleanup: " + err.Error())
+					return false
+				}
+				return true
+			})
+		})
+
 	require.NoError(t, err)
 	require.NotNil(t, installation)
-	defer func() {
-		retryFor(time.Minute*5, func() bool {
-			err := provisioner.DeleteInstallation(installation.ID)
-			if err != nil {
-				t.Log("nonfatal error deleting an installation during cleanup: " + err.Error())
-				return false
-			}
-			return true
-		})
-	}()
 
 	t.Log("wait for the Installation to become stable")
 
 	retryFor(time.Minute*10, func() bool {
-		installation, err = provisioner.GetInstallation(installation.ID,
+		var err error
+		installation, err = env.provisioner.GetInstallation(installation.ID,
 			&cloud.GetInstallationRequest{
 				IncludeGroupConfig:          false,
 				IncludeGroupConfigOverrides: false,
@@ -129,15 +163,21 @@ func TestSlackTranslationAndImport(t *testing.T) {
 	})
 	require.Equal(t, installation.State, cloud.InstallationStateStable)
 
-	t.Logf("start a new translation into installation %s", installation.ID)
+	return installation
+}
 
-	client := model.NewClient(env.awatURL)
+func startTranslationAndWaitForItToSucceed(
+	t *testing.T,
+	client *model.Client,
+	installation *cloud.InstallationDTO,
+	env *environment) *model.TranslationStatus {
+	t.Logf("start a new translation into installation %s", installation.ID)
 
 	ts, err := client.CreateTranslation(
 		&model.TranslationRequest{
 			Type:           "slack",
 			InstallationID: installation.ID,
-			Archive:        key,
+			Archive:        env.key,
 			Team:           slackTeam,
 		})
 	require.NoError(t, err)
@@ -171,7 +211,15 @@ func TestSlackTranslationAndImport(t *testing.T) {
 	ts, err = client.GetTranslationStatus(ts.ID)
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateComplete, ts.State)
+	return ts
+}
 
+func waitForImportToSucceed(
+	t *testing.T,
+	ts *model.TranslationStatus,
+	client *model.Client,
+	provisioner *cloud.Client,
+	installation *cloud.InstallationDTO) {
 	t.Log("make sure an import is created and wait for it to start")
 
 	importStatusList, err := client.GetImportStatusesByTranslation(ts.ID)
@@ -242,88 +290,6 @@ func TestSlackTranslationAndImport(t *testing.T) {
 		})
 	require.NoError(t, err)
 	require.Equal(t, cloud.InstallationStateStable, installation.State)
-
-	t.Log("validate the import data was imported properly")
-
-	clusterInstallations, err := provisioner.GetClusterInstallations(
-		&cloud.GetClusterInstallationsRequest{
-			Paging:         cloud.AllPagesNotDeleted(),
-			InstallationID: installation.ID,
-		})
-	require.Equal(t, 1, len(clusterInstallations))
-	ci := clusterInstallations[0]
-
-	t.Log("check teams")
-
-	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
-		[]string{
-			"--format", "json",
-			"--local",
-			"team", "list", `""`,
-		})
-	require.NoError(t, err)
-
-	teamSearch := []*team{}
-	_ = json.Unmarshal(output, &teamSearch)
-	require.NotEmpty(t, teamSearch)
-	assert.Equal(t, slackTeam, teamSearch[0].Name)
-
-	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
-		[]string{
-			"--format", "json",
-			"--local",
-			"user", "list",
-		})
-
-	t.Log("check channels")
-
-	channelSearch := []*channel{}
-	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
-		[]string{
-			"--format", "json",
-			"--local",
-			"channel", "list", slackTeam,
-		})
-
-	require.NoError(t, err)
-	err = json.Unmarshal(output, &channelSearch)
-	require.NoError(t, err)
-
-	t.Log("check users")
-
-	userSearchResult := []*user{}
-	err = json.Unmarshal(output, &userSearchResult)
-	require.NoError(t, err)
-	require.NotEmpty(t, userSearchResult)
-	t.Logf("user search result:\n%+v", userSearchResult)
-	for _, u := range userSearchResult {
-		if u.IsBot {
-			continue
-		}
-		correctUser, ok := correctUsers[u.Email]
-		if !ok {
-			// it is expected for the workspace to have some extra users in
-			// it that aren't in the hardcoded "correct" list
-			continue
-		}
-		t.Logf("%+v", u)
-		assert.Equal(t, correctUser, u.Username)
-	}
-
-	t.Log("check posts")
-
-	output, err = provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
-		[]string{
-			"--local",
-			"--format", "json",
-			"post", "list", fmt.Sprintf("%s:testing", slackTeam),
-		})
-
-	postListResult, err := extractPosts(output)
-	require.NoError(t, err)
-	assert.NotEmpty(t, postListResult)
-	assert.Equal(t, 12, len(postListResult))
-	assert.Equal(t, "short message", postListResult[0].Message)
 }
 
 type post struct {
@@ -353,6 +319,94 @@ type team struct {
 type channel struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
+}
+
+func checkTeams(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
+	t.Log("check teams")
+
+	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--format", "json",
+			"--local",
+			"team", "list", `""`,
+		})
+	require.NoError(t, err)
+
+	teamSearch := []*team{}
+	_ = json.Unmarshal(output, &teamSearch)
+	require.NotEmpty(t, teamSearch)
+	assert.Equal(t, slackTeam, teamSearch[0].Name)
+}
+
+func checkChannels(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
+	t.Log("check channels")
+
+	channelSearch := []*channel{}
+	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--format", "json",
+			"--local",
+			"channel", "list", slackTeam,
+		})
+
+	require.NoError(t, err)
+	err = json.Unmarshal(output, &channelSearch)
+	require.NoError(t, err)
+
+	found := false // find a channel we know is in the backup
+	for _, channel := range channelSearch {
+		if channel.Name == "testing" {
+			found = true
+			break
+		}
+	}
+	require.True(t, found)
+}
+
+func checkPosts(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
+
+	t.Log("check posts")
+
+	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--local",
+			"--format", "json",
+			"post", "list", fmt.Sprintf("%s:testing", slackTeam),
+		})
+
+	postListResult, err := extractPosts(output)
+	require.NoError(t, err)
+	assert.NotEmpty(t, postListResult)
+	assert.Equal(t, 12, len(postListResult))
+	assert.Equal(t, "short message", postListResult[0].Message)
+}
+
+func checkUsers(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
+	t.Log("check users")
+	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+		[]string{
+			"--format", "json",
+			"--local",
+			"user", "list",
+		})
+
+	userSearchResult := []*user{}
+	err = json.Unmarshal(output, &userSearchResult)
+	require.NoError(t, err)
+	require.NotEmpty(t, userSearchResult)
+	t.Logf("user search result:\n%+v", userSearchResult)
+	for _, u := range userSearchResult {
+		if u.IsBot {
+			continue
+		}
+		correctUser, ok := correctUsers[u.Email]
+		if !ok {
+			// it is expected for the workspace to have some extra users in
+			// it that aren't in the hardcoded "correct" list
+			continue
+		}
+		assert.Equal(t, correctUser, u.Username)
+	}
 }
 
 // if the doer returns true, consider it done, and stop retrying
@@ -432,10 +486,10 @@ func validatedEnvironment() (*environment, error) {
 	}
 
 	return &environment{
-		awatURL:        awat,
-		bucket:         s3URL,
-		provisionerURL: provisionerURL,
-		testDomain:     domain,
+		awatURL:     awat,
+		bucket:      s3URL,
+		provisioner: cloud.NewClient(provisionerURL),
+		testDomain:  domain,
 	}, nil
 }
 
