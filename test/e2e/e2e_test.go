@@ -100,15 +100,15 @@ func cleanOldInstallations(t *testing.T, provisioner *cloud.Client) {
 			IncludeGroupConfig:          false,
 			IncludeGroupConfigOverrides: false,
 		})
-	require.NoError(t, err)
 	// this is just a best-effort attempt to clean up from old test runs
 	// so just move on if it fails
-	if err == nil {
-		for _, i := range oldInstallations {
-			err = provisioner.DeleteInstallation(i.ID)
-			if err != nil {
-				t.Log(err.Error())
-			}
+	if err != nil {
+		return
+	}
+	for _, i := range oldInstallations {
+		err = provisioner.DeleteInstallation(i.ID)
+		if err != nil {
+			t.Log(err.Error())
 		}
 	}
 }
