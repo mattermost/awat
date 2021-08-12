@@ -120,9 +120,6 @@ func startedImportIsComplete(installation *cloud.InstallationDTO, i *model.Impor
 		// complete
 		installation.State == cloud.InstallationStateDeleted:
 	case
-		// if the State of the Installation is stable and the Import was
-		// started at least a little while ago, we can safely assume that
-		// an import happened and was completed
 		installation.State == cloud.InstallationStateImportComplete:
 	default:
 		return false
