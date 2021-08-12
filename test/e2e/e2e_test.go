@@ -541,12 +541,7 @@ func ensureArtifactInBucket(bucketName, keyName string) error {
 		Bucket: &bucketName,
 	}
 
-	p := s3.NewListObjectsV2Paginator(client, params,
-		func(o *s3.ListObjectsV2PaginatorOptions) {
-			if v := int32(1); v != 0 {
-				o.Limit = v
-			}
-		})
+	p := s3.NewListObjectsV2Paginator(client, params)
 
 	if !p.HasMorePages() {
 		return errors.Errorf("bucket %s was empty", bucketName)
