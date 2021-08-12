@@ -494,11 +494,6 @@ func validatedEnvironment() (*environment, error) {
 		return nil, errors.New("provided Provisioner URL must not be empty; set AWAT_E2E_PROVISIONER_URL")
 	}
 
-	err := ensureArtifactInBucket(s3URL)
-	if err != nil {
-		return nil, errors.Wrap(err, "provided bucket was not valid")
-	}
-
 	return &environment{
 		awatURL:     awat,
 		bucket:      s3URL,
