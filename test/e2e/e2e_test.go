@@ -289,6 +289,21 @@ func waitForImportToSucceed(
 			IncludeGroupConfigOverrides: false,
 		})
 	require.NoError(t, err)
+	require.Equal(t, cloud.InstallationStateImportComplete, installation.State)
+
+	retryFor(time.Minute*3, func() bool {
+		installation, _ = provisioner.GetInstallation(
+			importStatus.InstallationID,
+			&cloud.GetInstallationRequest{
+				IncludeGroupConfig:          false,
+				IncludeGroupConfigOverrides: false,
+			})
+		if installation.State == cloud.InstallationStateStable {
+			return true
+		}
+		return false
+	})
+
 	require.Equal(t, cloud.InstallationStateStable, installation.State)
 }
 

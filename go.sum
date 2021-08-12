@@ -213,8 +213,8 @@ github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFP
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/elazarl/goproxy v0.0.0-20180725130230-947c36da3153/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=
 github.com/emicklei/go-restful v0.0.0-20170410110728-ff4f55a20633/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
+github.com/emicklei/go-restful v2.9.5+incompatible h1:spTtZBk5DYEvbxMVutUuTyh1Ao2r4iyvLdACqsl/Ljk=
 github.com/emicklei/go-restful v2.9.5+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
-github.com/emicklei/go-restful v2.11.2+incompatible h1:Z4Z0K2AuOw+QtgwkkJnwpT165MBr12qS8rnBwjP/Pzs=
 github.com/emicklei/go-restful v2.11.2+incompatible/go.mod h1:otzb+WCGbkyDHkqmQmT5YD2WR4BBwUdeQoFo8l/7tVs=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
@@ -297,8 +297,8 @@ github.com/go-openapi/spec v0.0.0-20160808142527-6aced65f8501/go.mod h1:J8+jY1nA
 github.com/go-openapi/spec v0.17.0/go.mod h1:XkF/MOi14NmjsfZ8VtAKf8pIlbZzyoTvZsdfssdxcBI=
 github.com/go-openapi/spec v0.18.0/go.mod h1:XkF/MOi14NmjsfZ8VtAKf8pIlbZzyoTvZsdfssdxcBI=
 github.com/go-openapi/spec v0.19.2/go.mod h1:sCxk3jxKgioEJikev4fgkNmwS+3kuYdJtcsZsD5zxMY=
+github.com/go-openapi/spec v0.19.3 h1:0XRyw8kguri6Yw4SxhsQA/atC88yqrk0+G4YhI2wabc=
 github.com/go-openapi/spec v0.19.3/go.mod h1:FpwSN1ksY1eteniUU7X0N/BgJ7a4WvBFVA8Lj9mJglo=
-github.com/go-openapi/spec v0.19.9 h1:9z9cbFuZJ7AcvOHKIY+f6Aevb4vObNDkTEyoMfO7rAc=
 github.com/go-openapi/spec v0.19.9/go.mod h1:vqK/dIdLGCosfvYsQV3WfC7N3TiZSnGY2RZKoFK7X28=
 github.com/go-openapi/strfmt v0.17.0/go.mod h1:P82hnJI0CXkErkXi8IKjPbNBM6lV6+5pLP5l494TcyU=
 github.com/go-openapi/strfmt v0.18.0/go.mod h1:P82hnJI0CXkErkXi8IKjPbNBM6lV6+5pLP5l494TcyU=
@@ -308,8 +308,8 @@ github.com/go-openapi/swag v0.0.0-20160704191624-1d0bd113de87/go.mod h1:DXUve3Dp
 github.com/go-openapi/swag v0.17.0/go.mod h1:AByQ+nYG6gQg71GINrmuDXCPWdL640yX49/kXLo40Tg=
 github.com/go-openapi/swag v0.18.0/go.mod h1:AByQ+nYG6gQg71GINrmuDXCPWdL640yX49/kXLo40Tg=
 github.com/go-openapi/swag v0.19.2/go.mod h1:POnQmlKehdgb5mhVOsnJFsivZCEZ/vjK9gh66Z9tfKk=
+github.com/go-openapi/swag v0.19.5 h1:lTz6Ys4CmqqCQmZPBlbQENR1/GucA2bzYTE12Pw4tFY=
 github.com/go-openapi/swag v0.19.5/go.mod h1:POnQmlKehdgb5mhVOsnJFsivZCEZ/vjK9gh66Z9tfKk=
-github.com/go-openapi/swag v0.19.11 h1:RFTu/dlFySpyVvJDfp/7674JY4SDglYWKztbiIGFpmc=
 github.com/go-openapi/swag v0.19.11/go.mod h1:Uc0gKkdR+ojzsEpjh39QChyu92vPgIr72POcgHMAgSY=
 github.com/go-openapi/validate v0.18.0/go.mod h1:Uh4HdOzKt19xGIGm1qHf/ofbX1YQ4Y+MYsct2VUrAJ4=
 github.com/go-openapi/validate v0.19.2/go.mod h1:1tRCw7m3jtI8eNWEEliiAqUIcBztB2KDnRCRMUi7GTA=
@@ -567,7 +567,7 @@ github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e/go.mod h1:C1wdFJiN
 github.com/mailru/easyjson v0.7.0 h1:aizVhC/NAAcKWb+5QsU1iNOZb4Yws5UO2I+aIprQITM=
 github.com/mailru/easyjson v0.7.0/go.mod h1:KAzv3t3aY1NaHWoQz1+4F1ccyAH66Jk7yos7ldAVICs=
 github.com/marstr/guid v0.0.0-20170427235115-8bdf7d1a087c/go.mod h1:74gB1z2wpxxInTG6yaqA7KrtM0NZ+RbrcqDvYHefzho=
-github.com/mattermost/awat v0.0.0-20210430184220-463fd5614511/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
+github.com/mattermost/awat v0.0.0-20210616202500-f0bdd4f43f90/go.mod h1:1IdlNUGa6JbiO+JXLfl7/F2jGT8pFeQAUrm5QRkbmnw=
 github.com/mattermost/blubr v0.0.0-20200113232543-f0ce67760aeb/go.mod h1:Tk99160Gy8m4rJPKIgYZrYneLepPCx5KPB3rp9+iK00=
 github.com/mattermost/blubr v0.0.0-20210505124256-5b36c16ffa07/go.mod h1:RW6eWGoIeenY/GKtuDcF+ggCNk/FZWR0gYgDxuLzQOM=
 github.com/mattermost/go-i18n v1.11.0 h1:1hLKqn/ZvhZ80OekjVPGYcCrBfMz+YxNNgqS+beL7zE=
@@ -579,8 +579,8 @@ github.com/mattermost/ldap v0.0.0-20191128190019-9f62ba4b8d4d/go.mod h1:HLbgMEI5
 github.com/mattermost/ldap v3.0.4+incompatible h1:SOeNnz+JNR+foQ3yHkYqijb9MLPhXN2BZP/PdX23VDU=
 github.com/mattermost/ldap v3.0.4+incompatible/go.mod h1:b4reDCcGpBxJ4WX0f224KFY+OR0npin7or7EFpeIko4=
 github.com/mattermost/mattermost-cloud v0.39.0/go.mod h1:GbWfZajyp+DvdEpoNfFeJ3ZplwTtDV9pl6PhNnp+wq4=
-github.com/mattermost/mattermost-cloud v0.45.0 h1:4gNDih7pf0B+tuYr3MvneMvkSWMLLgr5rKWqBDizzo0=
-github.com/mattermost/mattermost-cloud v0.45.0/go.mod h1:BztQgZiUtBMKfj1BZ3AM7gvHDROjyjR9zwQ26t36E48=
+github.com/mattermost/mattermost-cloud v0.46.1-0.20210812204249-4b011d1b3ece h1:aamxuwFALdAr4WE9Grph+01F/XXe6j+npPU62tuOF88=
+github.com/mattermost/mattermost-cloud v0.46.1-0.20210812204249-4b011d1b3ece/go.mod h1:R9q2lmIqcShH8Pv7kItF2iUTj96kazK4gZ+sy0+OvXA=
 github.com/mattermost/mattermost-operator v1.12.0/go.mod h1:a6pSJI6bDaIfO65M/Hvuqg8kUNYQQYDHLayoT5XZx5o=
 github.com/mattermost/mattermost-operator v1.14.0 h1:RxcvgyO+jdFWlXZGOnLa8yxUod8AO1zGXtKmN48XTiU=
 github.com/mattermost/mattermost-operator v1.14.0/go.mod h1:9esaQrOcruyyGQme3AnXGnoCDbpER7XAifDVu3HlCm8=

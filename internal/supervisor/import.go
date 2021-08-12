@@ -123,8 +123,7 @@ func startedImportIsComplete(installation *cloud.InstallationDTO, i *model.Impor
 		// if the State of the Installation is stable and the Import was
 		// started at least a little while ago, we can safely assume that
 		// an import happened and was completed
-		installation.State == cloud.InstallationStateStable &&
-			i.StartAt < (model.Timestamp()-(time.Minute.Nanoseconds()/1000)):
+		installation.State == cloud.InstallationStateImportComplete:
 	default:
 		return false
 	}
