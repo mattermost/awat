@@ -78,7 +78,7 @@ func setupEnv(t *testing.T) *environment {
 	env, err := validatedEnvironment()
 	require.NoError(t, err)
 
-	err = ensureArtifactInBucket(env.bucket)
+	err = ensureArtifactInBucket(env.bucket, env.key)
 	t.Cleanup(func() {
 		err = deleteS3Object(env.bucket, env.key)
 		require.NoError(t, err)
@@ -529,7 +529,7 @@ func uploadTestArtifact(bucketName string) error {
 	return err
 }
 
-func ensureArtifactInBucket(bucketName string) error {
+func ensureArtifactInBucket(bucketName, keyName string) error {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
@@ -562,7 +562,7 @@ func ensureArtifactInBucket(bucketName string) error {
 		}
 
 		for _, item := range page.Contents {
-			if *item.Key == bucketName {
+			if *item.Key == keyName {
 				return nil
 			}
 		}
