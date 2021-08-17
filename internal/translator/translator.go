@@ -22,7 +22,7 @@ type Translator interface {
 // TranslatorOptions holds the extra data needed to instantiate a
 // concrete Translator
 type TranslatorOptions struct {
-	ArchiveType string
+	ArchiveType model.BackupType
 	Bucket      string
 	WorkingDir  string
 }

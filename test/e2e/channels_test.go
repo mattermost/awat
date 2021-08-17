@@ -6,7 +6,7 @@
 
 package e2e
 
-var channels []string = []string{
+var slackChannels []string = []string{
 	"new-shared-channel",
 	"off-topic",
 	"public-shared-channel-test",
@@ -33,4 +33,19 @@ var channels []string = []string{
 	"testingsomemoreee (private)",
 	"testprivate (private)",
 	"testprivate2 (private)",
+}
+
+var mattermostChannels []string = []string{
+	"aut-8",
+	"saepe-5",
+	"minus-6",
+	"off-topic",
+	"suscipit-4",
+	"town-square",
+	"ratione-1",
+	"minima-3",
+	"autem-2 (private)",
+	"amet-0 (private)",
+	"iusto-9 (private)",
+	"sequi-7 (private)",
 }

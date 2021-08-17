@@ -36,8 +36,10 @@ import (
 )
 
 const (
-	slackArchive = "../dummy-slack-workspace-archive.zip"
-	slackTeam    = "slack-import"
+	slackArchive      = "../dummy-slack-workspace-archive.zip"
+	mattermostArchive = "../dummy-mattermost-workspace-archive.zip"
+	slackTeam         = "slack-import"
+	mattermostTeam    = "ad-1"
 )
 
 type environment struct {
@@ -48,11 +50,21 @@ type environment struct {
 	provisioner *cloud.Client
 }
 
+type completedEnvironment struct {
+	t           *testing.T
+	provisioner *cloud.Client
+	target      *cloud.ClusterInstallation
+	archiveType model.BackupType
+}
+
 func TestSlackTranslationAndImport(t *testing.T) {
-	env := setupEnv(t)
+	env := setupEnvironment(t, model.SlackWorkspaceBackupType)
 	installation := getInstallation(t, env)
 	client := model.NewClient(env.awatURL)
-	ts := startTranslationAndWaitForItToSucceed(t, client, installation, env)
+	ts := startTranslationAndWaitForItToSucceed(
+		t, client, installation,
+		env, model.SlackWorkspaceBackupType)
+
 	waitForImportToSucceed(t, ts, client, env.provisioner, installation)
 
 	t.Log("validate the import data was imported properly")
@@ -66,26 +78,71 @@ func TestSlackTranslationAndImport(t *testing.T) {
 	require.True(t, len(clusterInstallations) > 0)
 	ci := clusterInstallations[0]
 
-	checkTeams(t, env.provisioner, ci)
-	checkChannels(t, env.provisioner, ci)
-	checkUsers(t, env.provisioner, ci)
-	checkPosts(t, env.provisioner, ci)
+	completed := &completedEnvironment{
+		t:           t,
+		provisioner: env.provisioner,
+		target:      ci,
+		archiveType: model.SlackWorkspaceBackupType,
+	}
+	checkTeams(completed)
+	checkChannels(completed)
+	checkUsers(completed)
+	checkPosts(completed)
 }
 
-func setupEnv(t *testing.T) *environment {
+func TestMattermostImport(t *testing.T) {
+	env := setupEnvironment(t, model.MattermostWorkspaceBackupType)
+	installation := getInstallation(t, env)
+	client := model.NewClient(env.awatURL)
+	ts := startTranslationAndWaitForItToSucceed(
+		t, client, installation,
+		env, model.MattermostWorkspaceBackupType)
+
+	waitForImportToSucceed(t, ts, client, env.provisioner, installation)
+
+	clusterInstallations, err := env.provisioner.GetClusterInstallations(
+		&cloud.GetClusterInstallationsRequest{
+			Paging:         cloud.AllPagesNotDeleted(),
+			InstallationID: installation.ID,
+		})
+	require.NoError(t, err)
+	require.True(t, len(clusterInstallations) > 0)
+	ci := clusterInstallations[0]
+
+	completed := &completedEnvironment{
+		t:           t,
+		provisioner: env.provisioner,
+		target:      ci,
+		archiveType: model.MattermostWorkspaceBackupType,
+	}
+	checkTeams(completed)
+	checkChannels(completed)
+	checkUsers(completed)
+	checkPosts(completed)
+
+}
+
+func setupEnvironment(t *testing.T, importType model.BackupType) *environment {
 	t.Log("validate the environment and gather variables")
 
 	env, err := validatedEnvironment()
 	require.NoError(t, err)
 
-	err = ensureArtifactInBucket(env.bucket, env.key)
+	switch importType {
+	case model.MattermostWorkspaceBackupType:
+		env.key = strings.TrimPrefix(mattermostArchive, "../")
+	case model.SlackWorkspaceBackupType:
+		env.key = strings.TrimPrefix(slackArchive, "../")
+	default:
+		t.FailNow()
+	}
+	err = uploadTestArtifact(env.bucket, env.key)
 	t.Cleanup(func() {
 		err = deleteS3Object(env.bucket, env.key)
 		require.NoError(t, err)
 	})
 	require.NoError(t, err)
 
-	env.key = strings.TrimPrefix(slackArchive, "../") // ok this could be more robust but really who cares
 	t.Log("clean up the environment from any previously interrupted tests")
 
 	cleanOldInstallations(t, env.provisioner)
@@ -170,15 +227,23 @@ func startTranslationAndWaitForItToSucceed(
 	t *testing.T,
 	client *model.Client,
 	installation *cloud.InstallationDTO,
-	env *environment) *model.TranslationStatus {
+	env *environment,
+	archiveType model.BackupType) *model.TranslationStatus {
 	t.Logf("start a new translation into installation %s", installation.ID)
+
+	var teamName string
+	if archiveType == model.SlackWorkspaceBackupType {
+		teamName = slackTeam
+	} else {
+		teamName = ""
+	}
 
 	ts, err := client.CreateTranslation(
 		&model.TranslationRequest{
-			Type:           "slack",
+			Type:           archiveType,
 			InstallationID: installation.ID,
 			Archive:        env.key,
-			Team:           slackTeam,
+			Team:           teamName,
 		})
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateRequested, ts.State)
@@ -189,6 +254,19 @@ func startTranslationAndWaitForItToSucceed(
 		ts, err = client.GetTranslationStatus(ts.ID)
 		require.NoError(t, err)
 		if ts.State != model.TranslationStateRequested {
+			if ts.Type == model.MattermostWorkspaceBackupType {
+				// Mattermost type backups have a no-op translation step which
+				// occurs very quickly. Due to this, it's difficult to time
+				// the InProgress state, which can exist for a very brief
+				// window, so return here, now that we know the Translation
+				// was started, and we'll move on to checking if the
+				// Translation completed
+				return true
+			}
+
+			// Slack backups will have to be translated, however, so we
+			// should be able to observe the Translation in the InProgress
+			// state
 			require.Equal(t, model.TranslationStateInProgress, ts.State)
 			return true
 		}
@@ -281,6 +359,7 @@ func waitForImportToSucceed(
 		return false
 	})
 	require.Equal(t, model.ImportStateComplete, importStatus.State)
+	require.Empty(t, importStatus.Error)
 
 	installation, err = provisioner.GetInstallation(
 		importStatus.InstallationID,
@@ -336,69 +415,135 @@ type channel struct {
 	Type string `json:"type"`
 }
 
-func checkTeams(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
-	t.Log("check teams")
+func (c *channel) String() string {
+	if c.Type == "P" {
+		// match the output from mmctl
+		return fmt.Sprintf("%s (private)", c.Name)
+	}
 
-	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+	return c.Name
+}
+
+func checkTeams(env *completedEnvironment) {
+	env.t.Log("check teams")
+	output, err := env.provisioner.ExecClusterInstallationCLI(env.target.ID, "mmctl",
 		[]string{
 			"--format", "json",
 			"--local",
 			"team", "list", `""`,
 		})
-	require.NoError(t, err)
+	require.NoError(env.t, err)
 
 	teamSearch := []*team{}
 	_ = json.Unmarshal(output, &teamSearch)
-	require.NotEmpty(t, teamSearch)
-	assert.Equal(t, slackTeam, teamSearch[0].Name)
+
+	require.NotEmpty(env.t, teamSearch)
+
+	switch env.archiveType {
+	case model.MattermostWorkspaceBackupType:
+	case model.SlackWorkspaceBackupType:
+		assert.Equal(env.t, slackTeam, teamSearch[0].Name)
+	default:
+		env.t.FailNow()
+	}
 }
 
-func checkChannels(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
-	t.Log("check channels")
+func checkChannels(env *completedEnvironment) {
+	env.t.Log("check channels")
+	var (
+		wantedChannels []string
+		wantedTeam     string
+	)
+
+	if env.archiveType == model.SlackWorkspaceBackupType {
+		wantedChannels = slackChannels
+		wantedTeam = slackTeam
+	} else if env.archiveType == model.MattermostWorkspaceBackupType {
+		wantedChannels = mattermostChannels
+		wantedTeam = mattermostTeam
+	} else {
+		env.t.FailNow()
+	}
 
 	channelSearch := []*channel{}
-	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+	output, err := env.provisioner.ExecClusterInstallationCLI(env.target.ID, "mmctl",
 		[]string{
 			"--format", "json",
 			"--local",
-			"channel", "list", slackTeam,
+			"channel", "list", wantedTeam,
 		})
 
-	require.NoError(t, err)
+	require.NoError(env.t, err)
 	err = json.Unmarshal(output, &channelSearch)
-	require.NoError(t, err)
+	require.NoError(env.t, err)
 
-	found := false // find a channel we know is in the backup
-	for _, channel := range channelSearch {
-		if channel.Name == "testing" {
-			found = true
-			break
+	for _, wantedChannel := range wantedChannels {
+		found := false // find channels we know are in the backup
+		for _, channel := range channelSearch {
+			if channel.String() == wantedChannel {
+				found = true
+				break
+			}
 		}
+		if !found {
+			env.t.Logf("Not found: %s", wantedChannel)
+			env.t.Logf("All channels found: %v", channelSearch)
+		}
+		require.True(env.t, found)
 	}
-	require.True(t, found)
 }
 
-func checkPosts(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
+func checkPosts(env *completedEnvironment) {
+	env.t.Log("check posts")
+	var channelName string
+	var teamName string
+	switch env.archiveType {
+	case model.MattermostWorkspaceBackupType:
+		channelName = "saepe-5"
+		teamName = mattermostTeam
+	case model.SlackWorkspaceBackupType:
+		channelName = "testing"
+		teamName = slackTeam
+	default:
+		env.t.FailNow()
+	}
 
-	t.Log("check posts")
-
-	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+	output, err := env.provisioner.ExecClusterInstallationCLI(env.target.ID, "mmctl",
 		[]string{
 			"--local",
 			"--format", "json",
-			"post", "list", fmt.Sprintf("%s:testing", slackTeam),
+			"post", "list", fmt.Sprintf("%s:%s", teamName, channelName),
 		})
 
 	postListResult, err := extractPosts(output)
-	require.NoError(t, err)
-	assert.NotEmpty(t, postListResult)
-	assert.Equal(t, 12, len(postListResult))
-	assert.Equal(t, "short message", postListResult[0].Message)
+	require.NoError(env.t, err)
+	assert.NotEmpty(env.t, postListResult)
+
+	switch env.archiveType {
+	case model.MattermostWorkspaceBackupType:
+		assert.Equal(env.t, 20, len(postListResult))
+		assert.Equal(env.t, "iusto nisi quos qui architecto tempore.\nut et fuga neque ducimus accusamus sit est sed.", postListResult[0].Message)
+	case model.SlackWorkspaceBackupType:
+		assert.Equal(env.t, 12, len(postListResult))
+		assert.Equal(env.t, "short message", postListResult[0].Message)
+	default:
+		env.t.FailNow()
+	}
 }
 
-func checkUsers(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstallation) {
-	t.Log("check users")
-	output, err := provisioner.ExecClusterInstallationCLI(ci.ID, "mmctl",
+func checkUsers(env *completedEnvironment) {
+	env.t.Log("check users")
+	var correctUsers map[string]string
+	switch env.archiveType {
+	case model.MattermostWorkspaceBackupType:
+		correctUsers = map[string]string{}
+	case model.SlackWorkspaceBackupType:
+		correctUsers = correctSlackUsers
+	default:
+		env.t.FailNow()
+	}
+
+	output, err := env.provisioner.ExecClusterInstallationCLI(env.target.ID, "mmctl",
 		[]string{
 			"--format", "json",
 			"--local",
@@ -407,8 +552,8 @@ func checkUsers(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstal
 
 	userSearchResult := []*user{}
 	err = json.Unmarshal(output, &userSearchResult)
-	require.NoError(t, err)
-	require.NotEmpty(t, userSearchResult)
+	require.NoError(env.t, err)
+	require.NotEmpty(env.t, userSearchResult)
 	for _, u := range userSearchResult {
 		if u.IsBot {
 			continue
@@ -419,7 +564,7 @@ func checkUsers(t *testing.T, provisioner *cloud.Client, ci *cloud.ClusterInstal
 			// it that aren't in the hardcoded "correct" list
 			continue
 		}
-		assert.Equal(t, correctUser, u.Username)
+		assert.Equal(env.t, correctUser, u.Username)
 	}
 }
 
@@ -502,19 +647,18 @@ func validatedEnvironment() (*environment, error) {
 	}, nil
 }
 
-func uploadTestArtifact(bucketName string) error {
+func uploadTestArtifact(bucketName, keyName string) error {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		return err
 	}
 
 	client := s3.NewFromConfig(cfg)
-	archive, err := os.Open(slackArchive)
+	archive, err := os.Open("../" + keyName)
 	defer archive.Close()
 	if err != nil {
 		return err
 	}
-	keyName := strings.TrimPrefix(archive.Name(), "../") // forgive me oh Lord for the sins I have committed
 
 	params := &s3.PutObjectInput{
 		Bucket: &bucketName,
@@ -527,41 +671,4 @@ func uploadTestArtifact(bucketName string) error {
 
 	_, err = client.PutObject(ctx, params)
 	return err
-}
-
-func ensureArtifactInBucket(bucketName, keyName string) error {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return err
-	}
-
-	client := s3.NewFromConfig(cfg)
-
-	params := &s3.ListObjectsV2Input{
-		Bucket: &bucketName,
-	}
-
-	p := s3.NewListObjectsV2Paginator(client, params)
-
-	if !p.HasMorePages() {
-		return errors.Errorf("bucket %s was empty", bucketName)
-	}
-
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Minute)
-	defer cancelFunc()
-
-	for p.HasMorePages() {
-		page, err := p.NextPage(ctx)
-		if err != nil {
-			return err
-		}
-
-		for _, item := range page.Contents {
-			if *item.Key == keyName {
-				return nil
-			}
-		}
-	}
-
-	return uploadTestArtifact(bucketName)
 }

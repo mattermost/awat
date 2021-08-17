@@ -6,7 +6,7 @@
 
 package e2e
 
-var correctUsers map[string]string = map[string]string{
+var correctSlackUsers map[string]string = map[string]string{
 	"vocre@3ssly.com":        "j",
 	"foo@bar.com":            "james",
 	"bar@baz.com":            "lindsay2",
@@ -56,4 +56,28 @@ var correctUsers map[string]string = map[string]string{
 	"03mgj@unedj.com":        "mike_test9",
 	"ukwl1@04wnp.com":        "mike_fulluser",
 	"nlgkr@mwo84.com":        "mike_guestuser",
+}
+
+var correctMattermostUsers map[string]string = map[string]string{
+	"user-5@sample.mattermost.com":   "aaron.medina",
+	"user-7@sample.mattermost.com":   "aaron.peterson",
+	"user-4@sample.mattermost.com":   "anne.stone",
+	"appsbot@localhost":              "appsbot",
+	"user-12@sample.mattermost.com":  "ashley.berry",
+	"channelexport@localhost":        "channelexport",
+	"user-6@sample.mattermost.com":   "christina.wilson",
+	"user-11@sample.mattermost.com":  "craig.reed",
+	"user-8@sample.mattermost.com":   "diana.wells",
+	"user-14@sample.mattermost.com":  "emily.meyer",
+	"guest@sample.mattermost.com":    "guest",
+	"user-3@sample.mattermost.com":   "jack.wheeler",
+	"user-9@sample.mattermost.com":   "karen.austin",
+	"mattermost-advisor@localhost":   "mattermost-advisor",
+	"playbook@localhost":             "playbook",
+	"user-10@sample.mattermost.com":  "robert.ward",
+	"user-13@sample.mattermost.com":  "samuel.palmer",
+	"user-2@sample.mattermost.com":   "samuel.tucker",
+	"surveybot@localhost":            "surveybot",
+	"sysadmin@sample.mattermost.com": "sysadmin",
+	"user-1@sample.mattermost.com":   "user-1",
 }

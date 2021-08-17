@@ -30,7 +30,7 @@ func init() {
 
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
-	startTranslationCmd.PersistentFlags().String(translationTypeFlag, model.SlackWorkspaceBackupType, "The type of backup being translated & imported (default: slack; valid options: mattermost, slack)")
+	startTranslationCmd.PersistentFlags().String(translationTypeFlag, string(model.SlackWorkspaceBackupType), "The type of backup being translated & imported (default: slack; valid options: mattermost, slack)")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
@@ -119,7 +119,8 @@ var startTranslationCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
-		translationType, _ := cmd.Flags().GetString(translationTypeFlag)
+		translationTypeString, _ := cmd.Flags().GetString(translationTypeFlag)
+		translationType := model.BackupType(translationTypeString)
 		if translationType != model.MattermostWorkspaceBackupType &&
 			translationType != model.SlackWorkspaceBackupType {
 			return errors.Errorf("unknown Translation type %q provided", translationType)
