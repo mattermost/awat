@@ -41,6 +41,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	if err != nil {
 		return "", err
 	}
+	defer os.RemoveAll(workdir)
 
 	logger := logrus.New()
 
@@ -75,6 +76,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	if err != nil {
 		return "", err
 	}
+	defer os.Remove(outputZip)
 
 	logger.Infof("Uploading Mattermost archive for Translation %s", translation.ID)
 	err = st.uploadTransformedZip(outputZip, st.bucket)

@@ -88,6 +88,7 @@ func (s *TranslationSupervisor) supervise() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to mark Translation %s as started; will not claim or begin translation process at this time", translation.ID)
 	}
+
 	output, err := translator.Translate(translation)
 	if err != nil {
 		return errors.Wrapf(err, "failed to translate Translation %s", translation.ID)
