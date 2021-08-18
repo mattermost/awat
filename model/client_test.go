@@ -109,7 +109,7 @@ func TestTranslationClient(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, translation)
 		assert.Equal(t, "foo.zip", translation.Resource)
-		assert.Equal(t, "slack", translation.Type)
+		assert.Equal(t, model.SlackWorkspaceBackupType, translation.Type)
 		assert.Equal(t, "team-name", translation.Team)
 		assert.Equal(t, "installationID", translation.InstallationID)
 	})
