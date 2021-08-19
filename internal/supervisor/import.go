@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -18,10 +19,11 @@ import (
 )
 
 type ImportSupervisor struct {
-	logger log.FieldLogger
-	store  importStore
-	cloud  *cloud.Client
-	bucket string
+	logger    log.FieldLogger
+	store     importStore
+	cloud     *cloud.Client
+	bucket    string
+	awsConfig *aws.Config
 }
 
 type importStore interface {
@@ -31,11 +33,10 @@ type importStore interface {
 }
 
 func NewImportSupervisor(store importStore, logger log.FieldLogger, bucket, provisionerURL string) *ImportSupervisor {
-	cloudClient := cloud.NewClient(provisionerURL)
 	return &ImportSupervisor{
 		logger: logger,
 		store:  store,
-		cloud:  cloudClient,
+		cloud:  cloud.NewClient(provisionerURL),
 		bucket: bucket,
 	}
 }

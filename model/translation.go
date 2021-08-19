@@ -24,7 +24,7 @@ type Translation struct {
 	InstallationID string
 	Team           string
 	Users          int
-	Type           string
+	Type           BackupType
 	Resource       string
 	CreateAt       int64
 	StartAt        int64

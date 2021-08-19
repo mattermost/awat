@@ -67,7 +67,7 @@ type ImportStatus struct {
 	Users          int
 	Team           string
 	State          string
-	Type           string
+	Type           BackupType
 }
 
 // State determines and returns the current state of the Import given

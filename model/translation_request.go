@@ -11,13 +11,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+type BackupType string
+
 const (
-	SlackWorkspaceBackupType      string = "slack"
-	MattermostWorkspaceBackupType string = "mattermost"
+	SlackWorkspaceBackupType      BackupType = "slack"
+	MattermostWorkspaceBackupType BackupType = "mattermost"
 )
 
 type TranslationRequest struct {
-	Type           string
+	Type           BackupType
 	InstallationID string
 	Archive        string
 	Team           string
