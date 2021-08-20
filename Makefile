@@ -31,13 +31,16 @@ test: build
 mocks:
 	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go
 
-e2e: e2e-warn e2e-mattermost e2e-slack
+e2e: e2e-warn e2e-mattermost e2e-slack e2e-parallel
 
 e2e-slack:
 	go test -v -tags e2e -count 1 ./test/e2e -timeout 30m -run Slack
 
 e2e-mattermost:
 	go test -v -tags e2e -count 1 ./test/e2e -timeout 15m -run Mattermost
+
+e2e-parallel:
+	go test -v -tags e2e -count 1 ./test/e2e -timeout 30m -run TwoInQuickSuccession
 
 e2e-warn:
 	@echo Warning!
