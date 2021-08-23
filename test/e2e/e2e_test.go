@@ -57,6 +57,72 @@ type completedEnvironment struct {
 	archiveType model.BackupType
 }
 
+func TestTwoInQuickSuccession(t *testing.T) {
+	env := setupEnvironment(t, model.SlackWorkspaceBackupType)
+	installations := make([]*cloud.InstallationDTO, 2)
+	for i := range installations {
+		installations[i] = getInstallation(t, env)
+	}
+
+	client := model.NewClient(env.awatURL)
+	translationsChannel := make(chan *model.TranslationStatus, 2)
+	translations := make([]*model.TranslationStatus, 2)
+	for i := range installations {
+		go func(i int) {
+			translationsChannel <- startTranslation(t, client, installations[i], env, model.SlackWorkspaceBackupType)
+		}(i)
+	}
+	for i := 0; i < 2; i++ {
+		translations[i] = <-translationsChannel
+	}
+
+	translationsChannel = make(chan *model.TranslationStatus, 2)
+	for i := range translations {
+		go func(i int) {
+			translationsChannel <- waitForTranslationToSucceed(t, client, translations[i])
+		}(i)
+	}
+	for i := 0; i < 2; i++ { // TODO write a helper function or two
+		translations[i] = <-translationsChannel
+	}
+
+	done := make(chan bool, 2)
+	for i := range translations {
+		go func(i int) {
+			waitForImportToSucceed(t, translations[i], client, env.provisioner, installations[i])
+			done <- true
+		}(i)
+	}
+	for i := 0; i < 2; i++ {
+		<-done
+	}
+
+	t.Log("validate the import data was imported properly")
+
+	for _, installation := range installations {
+		t.Logf("checking import into installation %s", installation.ID)
+		clusterInstallations, err := env.provisioner.GetClusterInstallations(
+			&cloud.GetClusterInstallationsRequest{
+				Paging:         cloud.AllPagesNotDeleted(),
+				InstallationID: installation.ID,
+			})
+		require.NoError(t, err)
+		require.True(t, len(clusterInstallations) > 0)
+		ci := clusterInstallations[0]
+
+		completed := &completedEnvironment{
+			t:           t,
+			provisioner: env.provisioner,
+			target:      ci,
+			archiveType: model.SlackWorkspaceBackupType,
+		}
+		checkTeams(completed)
+		checkChannels(completed)
+		checkUsers(completed)
+		checkPosts(completed)
+	}
+}
+
 func TestSlackTranslationAndImport(t *testing.T) {
 	env := setupEnvironment(t, model.SlackWorkspaceBackupType)
 	installation := getInstallation(t, env)
@@ -179,9 +245,12 @@ func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
 			DNS:       fmt.Sprintf("awat-e2e-%s%s", model.NewID(), env.testDomain),
 			Filestore: cloud.InstallationFilestoreBifrost,
 			Version:   "793e006",
-			// TODO change this to EE
-			// and a stable version not a random commit on my branch
-			Image: "mattermost/mattermost-team-edition",
+			// TODO: change this to EE
+			// and a stable version not a random commit on my branch.
+			// We're waiting for this PR to merge:
+			// https://github.com/mattermost/mattermost-server/pull/18084
+			Image:    "mattermost/mattermost-team-edition",
+			Affinity: cloud.InstallationAffinityMultiTenant,
 		})
 
 	t.Cleanup(
@@ -224,6 +293,17 @@ func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
 }
 
 func startTranslationAndWaitForItToSucceed(
+	t *testing.T,
+	client *model.Client,
+	installation *cloud.InstallationDTO,
+	env *environment,
+	archiveType model.BackupType) *model.TranslationStatus {
+
+	translation := startTranslation(t, client, installation, env, archiveType)
+	return waitForTranslationToSucceed(t, client, translation)
+}
+
+func startTranslation(
 	t *testing.T,
 	client *model.Client,
 	installation *cloud.InstallationDTO,
@@ -272,6 +352,15 @@ func startTranslationAndWaitForItToSucceed(
 		}
 		return false
 	})
+
+	return ts
+}
+
+func waitForTranslationToSucceed(
+	t *testing.T,
+	client *model.Client,
+	ts *model.TranslationStatus) *model.TranslationStatus {
+	var err error
 
 	t.Logf("wait for translation %s to complete", ts.ID)
 
