@@ -28,6 +28,9 @@ test: build
 	@echo Running tests
 	go test ./...
 
+test-image:
+	docker build -f test/Dockerfile .
+
 mocks:
 	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go
 
