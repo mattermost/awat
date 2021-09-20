@@ -1,5 +1,5 @@
-from golang:1.14
-workdir /awat/
-copy . /awat/
-run make build
-entrypoint ["/usr/bin/make", "e2e"]
+FROM golang:1.15
+WORKDIR /awat/
+COPY . /awat/
+RUN make build
+ENTRYPOINT ["/usr/bin/make", "e2e"]
