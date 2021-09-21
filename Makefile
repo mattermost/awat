@@ -22,14 +22,13 @@ build-image:   ## Build the docker image for the AWAT
 	@echo Building AWAT Docker Image
 	docker build \
 	. -f build/Dockerfile -t $(AWAT_IMAGE) 
-# --no-cache
 
 test: build
 	@echo Running tests
 	go test ./...
 
 test-image:
-	docker build -f test/Dockerfile .
+	docker build -f test/Dockerfile -t mattermost/awat-e2e .
 
 mocks:
 	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go

@@ -11,5 +11,7 @@ export TAG="${CIRCLE_SHA1:0:7}"
 echo $DOCKER_PASSWORD | docker login --username $DOCKER_USERNAME --password-stdin
 
 docker tag mattermost/awat:test mattermost/awat:$TAG
+docker tag mattermost/awat-e2e:latest mattermost/awat-e2e:$TAG
 
 docker push mattermost/awat:$TAG
+docker push mattermost/awat-e2e:$TAG
