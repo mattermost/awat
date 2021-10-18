@@ -63,7 +63,19 @@ var migrations = []migration{
 						FOREIGN KEY (TranslationID) REFERENCES Translation(ID)
 				;
 		`)
-
+			return err
+		},
+	},
+	{semver.MustParse("0.1.0"), semver.MustParse("0.2.0"),
+		func(e execer) error {
+			_, err := e.Exec(`
+				CREATE TABLE Upload (
+						ID          TEXT PRIMARY KEY NOT NULL,
+						CompleteAt  BigInt,
+						CreateAt    BigInt,
+						Error       TEXT
+				);
+		`)
 			return err
 		},
 	},

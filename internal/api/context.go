@@ -7,6 +7,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/sirupsen/logrus"
 )
@@ -17,14 +18,23 @@ import (
 type Context struct {
 	Store     Store
 	Logger    logrus.FieldLogger
+	AWS       *AWSContext
+	Workdir   string
 	RequestID string
+}
+
+type AWSContext struct {
+	Session *session.Session
+	Bucket  string
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
 func (c *Context) Clone() *Context {
 	return &Context{
-		Store:  c.Store,
-		Logger: c.Logger,
+		Store:   c.Store,
+		Logger:  c.Logger,
+		AWS:     c.AWS,
+		Workdir: c.Workdir,
 	}
 }
 
