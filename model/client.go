@@ -10,8 +10,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // Client is the programmatic interface to the AWAT API.
@@ -325,4 +328,66 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 	}
 
 	return c.httpClient.Do(req)
+}
+
+// Uploads the file specified as an argument to S3 via the AWAT
+func (c *Client) UploadArchiveForTranslation(filename string) (*http.Response, error) {
+	inputFile, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.buildURL("/upload"), inputFile)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+	stat, err := inputFile.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := stat.Size()
+	if size == 0 {
+		return nil, errors.New("provided file appears to be empty")
+	}
+	req.ContentLength = size
+	resp, err := http.DefaultClient.Do(req)
+	if resp.StatusCode != http.StatusAccepted {
+		return resp, errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
+	}
+	return resp, err
+}
+
+func (c *Client) WaitForUploadToComplete(uploadID string) error {
+	logger := log.New()
+
+	// 3 hour timeout, picked somewhat arbitrarily
+	for i := 0; i < (60 * 60 * 3); i++ {
+		resp, err := http.Get(c.buildURL(fmt.Sprintf("/upload/%s", uploadID)))
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("got unexpected status code %d", resp.StatusCode)
+		}
+		upload := new(Upload)
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(body, upload)
+		if err != nil {
+			return err
+		}
+		if upload.CompleteAt != 0 {
+			if upload.Error != "" {
+				return errors.New(upload.Error)
+			}
+			return nil
+		}
+		logger.Infof("Waiting for upload to complete..")
+		time.Sleep(time.Second)
+	}
+
+	return errors.Errorf("timed out waiting for upload %s to complete", uploadID)
 }
