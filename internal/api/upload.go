@@ -68,6 +68,7 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 	c.Logger.Debugf("finished reading and writing file; %d bytes written", totalWritten)
 	go func(context *Context, uploadID, uploadFileName, destinationKeyName string) {
 		err = uploadArchiveToS3(context, uploadFileName, destinationKeyName)
+		defer os.Remove(uploadFileName)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to upload file to S3")
 			storage_err := c.Store.CompleteUpload(uploadID, err.Error())
