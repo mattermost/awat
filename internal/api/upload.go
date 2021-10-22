@@ -28,7 +28,7 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	uploadLengthString := r.Header.Get("Content-Length")
 	if uploadLengthString == "" {
-		c.Logger.Errorln(r.Header)
+		c.Logger.Debugln(r.Header)
 		c.Logger.Error("Content-Length header must be set")
 		w.WriteHeader(http.StatusBadRequest)
 		return
