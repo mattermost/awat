@@ -27,6 +27,8 @@ func init() {
 		From(UploadTableName)
 }
 
+// GetUpload will fetch the metadata about an upload from the database
+// by ID
 func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	upload := new(model.Upload)
 
@@ -43,6 +45,8 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	return upload, nil
 }
 
+// CreateUpload creates a upload object in the database to represent a
+// started upload
 func (sqlStore *SQLStore) CreateUpload(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(UploadTableName).
@@ -57,8 +61,8 @@ func (sqlStore *SQLStore) CreateUpload(id string) error {
 	return err
 }
 
-// StoreUpload saves the specified Upload to the database,
-// assuming it is new
+// CompleteUpload marks an upload as complete in the database, with or
+// without an error message (provide an empty string if no error)
 func (sqlStore *SQLStore) CompleteUpload(uploadID, errorMessage string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(UploadTableName).
