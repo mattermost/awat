@@ -334,17 +334,17 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 func (c *Client) UploadArchiveForTranslation(filename string) (*http.Response, error) {
 	inputFile, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to read input file %s", filename)
 	}
 
 	req, err := http.NewRequest("POST", c.buildURL("/upload"), inputFile)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create HTTP request")
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 	stat, err := inputFile.Stat()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to determine file stats for %s", inputFile.Name())
 	}
 	size := stat.Size()
 	if size == 0 {
@@ -352,10 +352,41 @@ func (c *Client) UploadArchiveForTranslation(filename string) (*http.Response, e
 	}
 	req.ContentLength = size
 	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send HTTP request to AWAT")
+	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		return resp, errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
 	}
 	return resp, err
+}
+
+func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
+	resp, err := http.Get(c.buildURL(fmt.Sprintf("/upload/%s", uploadID)))
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, errors.Errorf("got unexpected status code %d", resp.StatusCode)
+	}
+	upload := new(Upload)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	err = json.Unmarshal(body, upload)
+	if err != nil {
+		return false, err
+	}
+	if upload.CompleteAt != 0 {
+		if upload.Error != "" {
+			return true, errors.New(upload.Error)
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 func (c *Client) WaitForUploadToComplete(uploadID string) error {
@@ -363,27 +394,12 @@ func (c *Client) WaitForUploadToComplete(uploadID string) error {
 
 	// 3 hour timeout, picked somewhat arbitrarily
 	for i := 0; i < (60 * 60 * 3); i++ {
-		resp, err := http.Get(c.buildURL(fmt.Sprintf("/upload/%s", uploadID)))
-		if err != nil {
+		complete, err := c.checkIfUploadComplete(uploadID)
+		if complete {
 			return err
 		}
-		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("got unexpected status code %d", resp.StatusCode)
-		}
-		upload := new(Upload)
-		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(body, upload)
-		if err != nil {
-			return err
-		}
-		if upload.CompleteAt != 0 {
-			if upload.Error != "" {
-				return errors.New(upload.Error)
-			}
-			return nil
+			return errors.Wrapf(err, "failed to check if upload %s is complete; will stop checking, but upload may complete anyway", uploadID)
 		}
 		logger.Infof("Waiting for upload to complete..")
 		time.Sleep(time.Second)
