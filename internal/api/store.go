@@ -20,4 +20,8 @@ type Store interface {
 	GetImportsByInstallation(id string) ([]*model.Import, error)
 	GetImportsByTranslation(id string) ([]*model.Import, error)
 	UpdateImport(imp *model.Import) error
+
+	GetUpload(id string) (*model.Upload, error)
+	CreateUpload(id string) error
+	CompleteUpload(uploadID, errorMessage string) error
 }

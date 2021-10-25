@@ -7,7 +7,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/mattermost/awat/model"
 	"github.com/pkg/errors"
@@ -20,6 +23,7 @@ const (
 	archiveFilename     = "filename"
 	teamFlag            = "team"
 	translationTypeFlag = "type"
+	uploadFile          = "upload"
 )
 
 func init() {
@@ -31,6 +35,8 @@ func init() {
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
 	startTranslationCmd.PersistentFlags().String(translationTypeFlag, string(model.SlackWorkspaceBackupType), "The type of backup being translated & imported (default: slack; valid options: mattermost, slack)")
+
+	startTranslationCmd.PersistentFlags().Bool(uploadFile, false, "Whether or not to upload the file provided before proceeding")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
@@ -141,6 +147,25 @@ var startTranslationCmd = &cobra.Command{
 		}
 
 		var err error
+		upload, _ := cmd.Flags().GetBool(uploadFile)
+		if upload {
+			resp, err := awat.UploadArchiveForTranslation(archive)
+			if err != nil {
+				return errors.Wrapf(err, "failed to upload %s", archive)
+			}
+			if resp.StatusCode != http.StatusAccepted {
+				return errors.Errorf("unexpected response from AWAT %d", resp.StatusCode)
+			}
+
+			archiveBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return errors.New("failed to retrieve archive input name from AWAT")
+			}
+			archive = string(archiveBytes)
+			uploadID := strings.TrimSuffix(archive, ".zip")
+			awat.WaitForUploadToComplete(uploadID)
+		}
+
 		var status *model.TranslationStatus
 		status, err = awat.CreateTranslation(
 			&model.TranslationRequest{

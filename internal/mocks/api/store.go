@@ -209,3 +209,46 @@ func (mr *MockStoreMockRecorder) UpdateImport(imp interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateImport", reflect.TypeOf((*MockStore)(nil).UpdateImport), imp)
 }
+
+// GetUpload mocks base method
+func (m *MockStore) GetUpload(id string) (*model.Upload, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUpload", id)
+	ret0, _ := ret[0].(*model.Upload)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUpload indicates an expected call of GetUpload
+func (mr *MockStoreMockRecorder) GetUpload(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUpload", reflect.TypeOf((*MockStore)(nil).GetUpload), id)
+}
+
+// CreateUpload mocks base method
+func (m *MockStore) CreateUpload(id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateUpload", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateUpload indicates an expected call of CreateUpload
+func (mr *MockStoreMockRecorder) CreateUpload(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUpload", reflect.TypeOf((*MockStore)(nil).CreateUpload), id)
+}
+
+// CompleteUpload mocks base method
+func (m *MockStore) CompleteUpload(uploadID, errorMessage string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteUpload", uploadID, errorMessage)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CompleteUpload indicates an expected call of CompleteUpload
+func (mr *MockStoreMockRecorder) CompleteUpload(uploadID, errorMessage interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteUpload", reflect.TypeOf((*MockStore)(nil).CompleteUpload), uploadID, errorMessage)
+}

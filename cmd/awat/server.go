@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -20,7 +21,6 @@ import (
 
 	"github.com/mattermost/awat/internal/api"
 	"github.com/mattermost/awat/internal/supervisor"
-	cloudModel "github.com/mattermost/mattermost-cloud/model"
 )
 
 const (
@@ -83,11 +83,20 @@ var serverCmd = &cobra.Command{
 		importSupervisor.Start()
 
 		router := mux.NewRouter()
-		api.Register(router, &api.Context{
-			Store:     sqlStore,
-			Logger:    logger,
-			RequestID: cloudModel.NewID(),
-		})
+		awsSession, err := session.NewSession()
+		if err != nil {
+			return err
+		}
+		api.Register(router,
+			&api.Context{
+				Store:  sqlStore,
+				Logger: logger,
+				AWS: &api.AWSContext{
+					Session: awsSession,
+					Bucket:  bucket,
+				},
+				Workdir: workdir,
+			})
 
 		srv := &http.Server{
 			Addr:           listen,
