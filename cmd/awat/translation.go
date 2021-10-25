@@ -154,7 +154,7 @@ var startTranslationCmd = &cobra.Command{
 				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
 			if resp.StatusCode != http.StatusAccepted {
-				return errors.Errorf("Unexpected response from AWAT %d", resp.StatusCode)
+				return errors.Errorf("unexpected response from AWAT %d", resp.StatusCode)
 			}
 
 			archiveBytes, err := ioutil.ReadAll(resp.Body)
