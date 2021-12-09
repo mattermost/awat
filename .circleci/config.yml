@@ -2,7 +2,7 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: circleci/golang:1.16.5
+    - image: cimg/go:1.17.4
 
 aliases:
 - &restore_cache
