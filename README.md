@@ -12,7 +12,7 @@ Run `awat --help` for more information.
 
 # Usage
 
-The `awat` binary provides both a server a and a CLI client.
+The `awat` binary provides both a server and a CLI client.
 
 ## Server
 
