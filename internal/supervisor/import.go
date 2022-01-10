@@ -32,11 +32,11 @@ type importStore interface {
 	UpdateImport(imp *model.Import) error
 }
 
-func NewImportSupervisor(store importStore, logger log.FieldLogger, bucket, provisionerURL string) *ImportSupervisor {
+func NewImportSupervisor(store importStore, logger log.FieldLogger, cloudClient *cloud.Client, bucket string) *ImportSupervisor {
 	return &ImportSupervisor{
 		logger: logger,
 		store:  store,
-		cloud:  cloud.NewClient(provisionerURL),
+		cloud:  cloudClient,
 		bucket: bucket,
 	}
 }

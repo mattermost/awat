@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/mattermost/awat/internal/api"
 	"github.com/mattermost/awat/internal/supervisor"
+	"github.com/mattermost/mattermost-cloud/model"
 )
 
 const (
@@ -30,6 +30,7 @@ const (
 	workingDirectory = "workdir"
 	serverFlag       = "server"
 	provisionerFlag  = "provisioner"
+	debugFlag        = "debug"
 )
 
 func init() {
@@ -38,6 +39,7 @@ func init() {
 	serverCmd.PersistentFlags().String(workingDirectory, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
 	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
+	serverCmd.PersistentFlags().Bool(debugFlag, true, "Whether to output debug logs")
 	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
 
@@ -46,18 +48,20 @@ var serverCmd = &cobra.Command{
 	Short: "Run the AWAT server.",
 	RunE: func(command *cobra.Command, args []string) error {
 
-		logger.SetLevel(logrus.DebugLevel) // TODO add a flag for this
+		debug, _ := command.Flags().GetBool(debugFlag)
+		if debug {
+			logger.SetLevel(logrus.DebugLevel)
+		}
 
 		listen, _ := command.Flags().GetString(listenFlag)
 		if listen == "" {
-			return fmt.Errorf("the server command requires the --listen flag not be empty")
+			return errors.New("the server command requires the --listen flag not be empty")
 		}
 
 		workdir, _ := command.Flags().GetString(workingDirectory)
 		if workdir == "" {
-			return fmt.Errorf("the server command requires the --workdir flag not be empty")
+			return errors.New("the server command requires the --workdir flag not be empty")
 		}
-
 		_, err := os.Stat(workdir)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -76,17 +80,31 @@ var serverCmd = &cobra.Command{
 		bucket, _ := command.Flags().GetString(bucketFlag)
 		provisionerURL, _ := command.Flags().GetString(provisionerFlag)
 
-		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
-		translationSupervisor.Start()
+		logger.WithFields(logrus.Fields{
+			"build-hash":  model.BuildHash,
+			"provisioner": provisionerURL,
+			"bucket":      bucket,
+			"workdir":     workdir,
+			"debug":       debug,
+		}).Info("Starting AWAT Server")
 
-		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, bucket, provisionerURL)
-		importSupervisor.Start()
+		cloud, err := buildCloudClientAndCheckConnectivity(provisionerURL)
+		if err != nil {
+			return err
+		}
 
-		router := mux.NewRouter()
 		awsSession, err := session.NewSession()
 		if err != nil {
 			return err
 		}
+
+		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
+		translationSupervisor.Start()
+
+		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloud, bucket)
+		importSupervisor.Start()
+
+		router := mux.NewRouter()
 		api.Register(router,
 			&api.Context{
 				Store:  sqlStore,
@@ -128,4 +146,14 @@ var serverCmd = &cobra.Command{
 		defer cancel()
 		return srv.Shutdown(ctx)
 	},
+}
+
+func buildCloudClientAndCheckConnectivity(provisionerURL string) (*model.Client, error) {
+	cloudClient := model.NewClient(provisionerURL)
+	_, err := cloudClient.GetInstallationsCount(false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to check provisioner connectivity")
+	}
+
+	return cloudClient, nil
 }

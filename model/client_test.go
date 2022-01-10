@@ -20,6 +20,22 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
+type MockAWS struct {
+	resourceExists bool
+}
+
+func (a *MockAWS) GetBucketName() string {
+	return "test"
+}
+
+func (a *MockAWS) CheckBucketFileExists(file string) (bool, error) {
+	return a.resourceExists, nil
+}
+
+func (a *MockAWS) UploadArchiveToS3(uploadFileName, destKeyName string) error {
+	return nil
+}
+
 func TestTranslationClient(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	mockController := gomock.NewController(t)
@@ -30,6 +46,7 @@ func TestTranslationClient(t *testing.T) {
 		&api.Context{
 			Store:  store,
 			Logger: logger,
+			AWS:    &MockAWS{resourceExists: true},
 		})
 	ts := httptest.NewServer(router)
 	defer ts.Close()

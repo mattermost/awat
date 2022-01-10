@@ -22,14 +22,32 @@ import (
 	"github.com/mattermost/awat/model"
 )
 
+type MockAWS struct {
+	resourceExists bool
+}
+
+func (a *MockAWS) GetBucketName() string {
+	return "test"
+}
+
+func (a *MockAWS) CheckBucketFileExists(file string) (bool, error) {
+	return a.resourceExists, nil
+}
+
+func (a *MockAWS) UploadArchiveToS3(uploadFileName, destKeyName string) error {
+	return nil
+}
+
 func TestTranslations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
 	router := mux.NewRouter()
+	mockAWS := &MockAWS{resourceExists: true}
 	Register(router, &Context{
 		Store:  store,
 		Logger: logger,
+		AWS:    mockAWS,
 	})
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -117,6 +135,17 @@ func TestTranslations(t *testing.T) {
 		assert.Equal(t, "foo.zip", translation.Resource)
 		assert.Equal(t, "teamname", translation.Team)
 		assert.Equal(t, "installationID", translation.InstallationID)
+	})
+
+	t.Run("start a new translation, bad resource name", func(t *testing.T) {
+		mockAWS.resourceExists = false
+
+		resp, err := http.Post(fmt.Sprintf("%s/translate", ts.URL), "application/json",
+			strings.NewReader(
+				`{"Type": "slack", "InstallationID": "installationID", "Archive": "foo.zip", "Team": "teamname"}`,
+			))
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("get a translation by Installation ID", func(t *testing.T) {

@@ -6,9 +6,15 @@ package api
 
 import (
 	"net/http"
+	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -18,14 +24,67 @@ import (
 type Context struct {
 	Store     Store
 	Logger    logrus.FieldLogger
-	AWS       *AWSContext
+	AWS       AWS
 	Workdir   string
 	RequestID string
 }
 
+type AWS interface {
+	GetBucketName() string
+	CheckBucketFileExists(file string) (bool, error)
+	UploadArchiveToS3(uploadFileName, destKeyName string) error
+}
 type AWSContext struct {
 	Session *session.Session
 	Bucket  string
+}
+
+func (a *AWSContext) GetSession() *session.Session {
+	return a.Session
+}
+
+func (a *AWSContext) GetBucketName() string {
+	return a.Bucket
+}
+
+func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
+	s3client := s3.New(a.Session)
+	_, err := s3client.HeadObject(&s3.HeadObjectInput{
+		Bucket: aws.String(a.Bucket),
+		Key:    aws.String(file),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchBucket:
+				return false, errors.Errorf("bucket %s does not exist", a.Bucket)
+			case "NotFound": // s3.ErrCodeNoSuchKey does not work, aws is missing this error code so we hardwire a string
+				return false, nil
+			default:
+				return false, err
+			}
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error {
+	s3client := s3.New(a.Session)
+	uploadFile, err := os.Open(uploadFileName)
+	if err != nil {
+		return errors.New("failed to reopen file after flushing to disk")
+	}
+
+	uploader := s3manager.NewUploaderWithClient(s3client)
+	_, err = uploader.Upload(
+		&s3manager.UploadInput{
+			Bucket: aws.String(a.GetBucketName()),
+			Key:    &destKeyName,
+			Body:   uploadFile,
+		})
+	return err
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
