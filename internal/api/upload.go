@@ -13,11 +13,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/gorilla/mux"
 	"github.com/mattermost/awat/model"
-	"github.com/pkg/errors"
 )
 
 func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -67,7 +64,7 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	c.Logger.Debugf("finished reading and writing file; %d bytes written", totalWritten)
 	go func(context *Context, uploadID, uploadFileName, destinationKeyName string) {
-		err = uploadArchiveToS3(context, uploadFileName, destinationKeyName)
+		err = c.AWS.UploadArchiveToS3(uploadFileName, destinationKeyName)
 		defer os.Remove(uploadFileName)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to upload file to S3")
@@ -123,21 +120,4 @@ func handleCheckUploadStatus(c *Context, w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-}
-
-func uploadArchiveToS3(c *Context, uploadFileName string, destKeyName string) error {
-	s3client := s3.New(c.AWS.Session)
-	uploadFile, err := os.Open(uploadFileName)
-	if err != nil {
-		return errors.New("failed to reopen file after flushing to disk")
-	}
-
-	uploader := s3manager.NewUploaderWithClient(s3client)
-	_, err = uploader.Upload(
-		&s3manager.UploadInput{
-			Bucket: &c.AWS.Bucket,
-			Key:    &destKeyName,
-			Body:   uploadFile,
-		})
-	return err
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/awat/model"
+	"github.com/sirupsen/logrus"
 )
 
 // handleListTranslations returns all Translations in the database. Responds to GET /translations
@@ -40,6 +41,18 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	}
 
 	translation := model.NewTranslationFromRequest(translationRequest)
+	exists, err := c.AWS.CheckBucketFileExists(translation.Resource)
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to check if bucket and file exist")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		c.Logger.Warnf("resource %s does not exist in bucket %s", translation.Resource, c.AWS.GetBucketName())
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	err = c.Store.StoreTranslation(translation)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to store the translation request in the database")
@@ -51,7 +64,10 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusAccepted)
 	outputJSON(c, w, translationStatusFromTranslation(translation))
 
-	c.Logger.Debugf("Started new translation with ID %s for Installation %s", translation.ID, translation.InstallationID)
+	c.Logger.WithFields(logrus.Fields{
+		"installation": translation.InstallationID,
+		"resource":     translation.Resource,
+	}).Debugf("Started new translation with ID %s", translation.ID)
 }
 
 // handleGetTranslationStatus responds to GET /translation/{id} with

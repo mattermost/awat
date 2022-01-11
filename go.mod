@@ -12,10 +12,10 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/lib/pq v1.8.0
-	github.com/mattermost/mattermost-cloud v0.46.1-0.20210812204249-4b011d1b3ece
+	github.com/mattermost/mattermost-cloud v0.48.0
 	github.com/mattermost/mmetl v0.0.2-0.20210316151859-38824e5f5efd
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v1.1.1
+	github.com/spf13/cobra v1.3.0
 	github.com/stretchr/testify v1.7.0
 )
