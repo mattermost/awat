@@ -39,10 +39,6 @@ type AWSContext struct {
 	Bucket  string
 }
 
-func (a *AWSContext) GetSession() *session.Session {
-	return a.Session
-}
-
 func (a *AWSContext) GetBucketName() string {
 	return a.Bucket
 }
@@ -74,7 +70,7 @@ func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error
 	s3client := s3.New(a.Session)
 	uploadFile, err := os.Open(uploadFileName)
 	if err != nil {
-		return errors.New("failed to reopen file after flushing to disk")
+		return errors.New("failed to open file before upload")
 	}
 
 	uploader := s3manager.NewUploaderWithClient(s3client)

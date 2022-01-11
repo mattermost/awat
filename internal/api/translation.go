@@ -43,7 +43,7 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	translation := model.NewTranslationFromRequest(translationRequest)
 	exists, err := c.AWS.CheckBucketFileExists(translation.Resource)
 	if err != nil {
-		c.Logger.Error(err)
+		c.Logger.WithError(err).Error("failed to check if bucket and file exist")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
