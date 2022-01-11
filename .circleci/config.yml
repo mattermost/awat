@@ -61,6 +61,15 @@ jobs:
           - checkout
           - run: make test
 
+    release:
+      executor: default
+      steps:
+        - checkout
+        - run:
+            command: |
+              make deps
+              make release
+
 workflows:
   version: 2
   ci-build:
@@ -72,3 +81,56 @@ workflows:
         requires:
           - test
           - check-boilerplate
+  publish-github-release:
+    jobs:
+      - release:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /v[0-9]+(\.[0-9]+)*/
+  master-build:
+    jobs:
+      - check-boilerplate:
+          filters:
+            branches:
+              only:
+                - master
+      - test:
+          filters:
+            branches:
+              only:
+                - master
+      - push-docker:
+          context: matterbuild-docker
+          requires:
+            - test
+            - check-boilerplate
+          filters:
+            branches:
+              only:
+                - master
+  tag-builds:
+    jobs:
+      - test:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - check-boilerplate:
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
+      - push-docker:
+          context: matterbuild-docker
+          requires:
+            - test
+            - check-boilerplate
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
