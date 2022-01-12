@@ -51,3 +51,13 @@ e2e-warn:
 	@echo AWAT_E2E_URL set to the AWAT endpoint
 	@echo AWAT_E2E_PROVISIONER_URL set to the Provisioner endpoint
 	@echo AWAT_E2E_BUCKET set to the address of the S3 bucket
+
+.PHONY: release
+release:
+	@echo Cut a release
+	bash ./scripts/release.sh
+
+.PHONY: deps
+deps:
+	sudo apt update && sudo apt install hub git
+	go get k8s.io/release/cmd/release-notes
