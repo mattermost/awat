@@ -46,12 +46,12 @@ jobs:
         - setup_remote_docker
         - run: make build-image
         - run: make test-image
-        - run: ./scripts/push-docker.sh
+        - run: bash scripts/push-docker.sh
         - run:
             name: Re-run Docker Push if fail
             command: |
                 sleep 20
-                ./scripts/push-docker.sh
+                bash scripts/push-docker.sh
             when: on_fail
 
     test:
