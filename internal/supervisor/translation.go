@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/awat/internal/store"
@@ -42,34 +41,32 @@ func (s *TranslationSupervisor) Start() {
 	s.logger.Info("Translation supervisor started")
 	go func() {
 		for {
-			err := s.supervise()
-			if err != nil {
-				s.logger.WithError(err).Error("failed an operation while supervising translations")
-			}
-			time.Sleep(60 * time.Second)
+			s.supervise()
+			time.Sleep(60 * time.Second) // TODO: make this configurable
 		}
 	}()
 }
 
 // supervise queries the database for available Translations and
 // works through the batch returned serially
-func (s *TranslationSupervisor) supervise() error {
+func (s *TranslationSupervisor) supervise() {
 	translation, err := s.store.GetTranslationReadyToStart()
 	if err != nil {
-		return errors.Wrap(err, "Failed to query database for pending translations")
+		s.logger.WithError(err).Error("Failed to query database for pending translations")
+		return
 	}
-
 	if translation == nil {
-		// no work found so just return
-		return nil
+		return
 	}
 
-	s.logger.Debugf("Translating %s for Installation %s...", translation.ID, translation.InstallationID)
+	logger := s.logger.WithFields(log.Fields{"translation": translation.ID, "installation": translation.InstallationID})
+	logger.Info("Beginning translation")
 
 	// TODO XXX expose the Pod name as an env var and use it as the second argument here
 	err = s.store.TryLockTranslation(translation, model.NewID())
 	if err != nil {
-		return errors.Wrapf(err, "failed to lock Translation %s", translation.ID)
+		logger.WithError(err).Error("failed to lock translation")
+		return
 	}
 	defer s.store.UnlockTranslation(translation)
 
@@ -80,32 +77,37 @@ func (s *TranslationSupervisor) supervise() error {
 			WorkingDir:  s.workdir,
 		})
 	if err != nil {
-		return errors.Wrapf(err, "failed to create translator for Translation %s", translation.ID)
+		logger.WithError(err).Error("Failed to create translator")
+		return
 	}
 
 	translation.StartAt = model.Timestamp()
 	err = s.store.UpdateTranslation(translation)
 	if err != nil {
-		return errors.Wrapf(err, "failed to mark Translation %s as started; will not claim or begin translation process at this time", translation.ID)
+		logger.WithError(err).Error("Failed to mark translation as started")
+		return
 	}
 
 	output, err := translator.Translate(translation)
 	if err != nil {
-		return errors.Wrapf(err, "failed to translate Translation %s", translation.ID)
+		logger.WithError(err).Error("Failed translation")
+		return
 	}
 
 	translation.CompleteAt = model.Timestamp()
 	err = s.store.UpdateTranslation(translation)
 	if err != nil {
-		return errors.Wrapf(err, "failed to store completed Translation %s; the Translation may be erroneously repeated!", translation.ID)
+		logger.WithError(err).Error("Failed to mark translation as completed")
+		return
 	}
 
 	importResource := fmt.Sprintf("%s/%s", s.bucket, output)
 	imp := model.NewImport(translation.ID, importResource)
 	err = s.store.StoreImport(imp)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create an Import for Translation %s; the Translation may be complete but it will not be imported automatically", translation.ID)
+		logger.WithError(err).Error("Failed to create an import for translation")
+		return
 	}
 
-	return nil
+	logger.Info("Translation completed")
 }

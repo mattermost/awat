@@ -95,7 +95,6 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 // from S3 and writing it out to workdir, which is assumed to be of
 // sufficient capacity for the archive
 func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir, resource string) (string, error) {
-
 	sess := session.Must(session.NewSession())
 
 	downloader := s3manager.NewDownloader(sess)
