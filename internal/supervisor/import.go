@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,27 +44,28 @@ func (s *ImportSupervisor) Start() {
 	s.logger.Info("Import supervisor started")
 	go func() {
 		for {
-			err := s.supervise()
-			if err != nil {
-				s.logger.WithError(err).Error("failed an operation while supervising imports")
-			}
-			time.Sleep(30 * time.Second)
+			s.supervise()
+			time.Sleep(30 * time.Second) // TODO: make this configurable
 		}
 	}()
 }
 
-func (s *ImportSupervisor) supervise() error {
+func (s *ImportSupervisor) supervise() {
 	imports, err := s.store.GetImportsInProgress()
 	if err != nil {
-		return errors.Wrap(err, "failed to look up ongoing Imports to supervise")
+		s.logger.WithError(err).Error("Failed to look up ongoing Imports to supervise")
+		return
 	}
 
 	for _, i := range imports {
 		translation, err := s.store.GetTranslation(i.TranslationID)
 		if err != nil {
-			s.logger.WithError(err).Warnf("failed to look up Translation %s", i.TranslationID)
+			s.logger.WithError(err).Errorf("Failed to look up Translation %s", i.TranslationID)
 			continue
 		}
+
+		logger := s.logger.WithFields(log.Fields{"translation": translation.ID, "installation": translation.InstallationID})
+		logger.Info("Checking on import progress")
 
 		installation, err := s.cloud.GetInstallation(
 			translation.InstallationID,
@@ -74,42 +74,47 @@ func (s *ImportSupervisor) supervise() error {
 				IncludeGroupConfigOverrides: false,
 			})
 		if err != nil {
-			s.logger.WithError(err).Warnf("failed to fetch information on Installation %s", translation.InstallationID)
+			logger.WithError(err).Error("Failed to fetch installation")
 			continue
 		}
 		if installation == nil {
-			s.logger.WithError(errors.New("Installation not found")).Warnf("Installation with ID %s not found but no error was returned from the Provisioner", translation.InstallationID)
+			logger.Error("Installation not found")
+			continue
+		}
+		if !startedImportIsComplete(installation, i) {
+			logger.Debug("Import is still running")
 			continue
 		}
 
-		if startedImportIsComplete(installation, i) {
-			i.CompleteAt = model.Timestamp()
-			err := s.store.UpdateImport(i)
-			if err != nil {
-				s.logger.WithError(err).Warnf("Import %s was complete but couldn't be marked as such", i.ID)
-			}
-
-			key := fmt.Sprintf("%s.zip", i.TranslationID)
-			cfg, err := config.LoadDefaultConfig(context.TODO())
-			if err != nil {
-				s.logger.WithError(err).Warnf("Failed to clean up s3://%s/%s", s.bucket, key)
-				return err
-			}
-
-			ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
-			defer cancelFunc()
-
-			client := s3.NewFromConfig(cfg)
-			_, err = client.DeleteObject(ctx, &s3.DeleteObjectInput{
-				Bucket: &s.bucket,
-				Key:    &key,
-			})
-
-			return err
+		i.CompleteAt = model.Timestamp()
+		err = s.store.UpdateImport(i)
+		if err != nil {
+			logger.WithError(err).Error("Failed to mark import as completed")
+			return
 		}
-	}
 
-	return nil
+		cfg, err := config.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			logger.WithError(err).Error("Failed to load AWS config")
+			return
+		}
+
+		key := fmt.Sprintf("%s.zip", i.TranslationID)
+		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancelFunc()
+
+		client := s3.NewFromConfig(cfg)
+		_, err = client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: &s.bucket,
+			Key:    &key,
+		})
+		if err != nil {
+			logger.WithError(err).Error("Failed to delete translation from S3")
+			return
+		}
+
+		logger.Debug("Import cleanup completed successfully")
+	}
 }
 
 // startedImportIsComplete returns true if an Import with a nonzero
