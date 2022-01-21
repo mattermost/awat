@@ -22,12 +22,12 @@ const (
 // into an Installation in order to track that process
 type Import struct {
 	ID            string
-	CreateAt      int64
-	CompleteAt    int64
-	StartAt       int64
-	LockedBy      string
 	TranslationID string
 	Resource      string
+	CreateAt      int64
+	StartAt       int64
+	CompleteAt    int64
+	LockedBy      string
 	Error         string
 }
 
@@ -46,14 +46,11 @@ type ImportCompletedWorkRequest struct {
 	Error      string
 }
 
-// NewImport creates an Import with the appropriate creation-time
-// metadata and associates it with the given translationID
-func NewImport(translationID string, input string) *Import {
+// NewImport returns a new import resource.
+func NewImport(translationID, importResource string) *Import {
 	return &Import{
-		ID:            NewID(),
 		TranslationID: translationID,
-		CreateAt:      Timestamp(),
-		Resource:      input,
+		Resource:      importResource,
 	}
 }
 

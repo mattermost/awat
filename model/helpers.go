@@ -5,15 +5,12 @@
 package model
 
 import (
-	"time"
-
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
 )
 
-// Timestamp produces a millisecond-precision timestamp in a standard
-// way with the other Mattermost APIs
-func Timestamp() int64 {
-	return time.Now().UnixNano() / 1000
+// GetMillis is a convenience method to get milliseconds since epoch.
+func GetMillis() int64 {
+	return cloudModel.GetMillis()
 }
 
 // NewID produces IDs for unique objects

@@ -45,13 +45,13 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	return upload, nil
 }
 
-// CreateUpload creates a upload object in the database to represent a
+// CreateUpload creates an upload object in the database to represent a
 // started upload
 func (sqlStore *SQLStore) CreateUpload(id string) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(UploadTableName).
 		SetMap(map[string]interface{}{
-			"CreateAt":   model.Timestamp(),
+			"CreateAt":   model.GetMillis(),
 			"CompleteAt": 0,
 			"ID":         id,
 			"Error":      "",
@@ -68,7 +68,7 @@ func (sqlStore *SQLStore) CompleteUpload(uploadID, errorMessage string) error {
 		Update(UploadTableName).
 		Where("ID = ?", uploadID).
 		SetMap(map[string]interface{}{
-			"CompleteAt": model.Timestamp(),
+			"CompleteAt": model.GetMillis(),
 			"ID":         uploadID,
 			"Error":      errorMessage,
 		}),

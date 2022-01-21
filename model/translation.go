@@ -22,10 +22,10 @@ const (
 type Translation struct {
 	ID             string
 	InstallationID string
+	Resource       string
+	Type           BackupType
 	Team           string
 	Users          int
-	Type           BackupType
-	Resource       string
 	CreateAt       int64
 	StartAt        int64
 	CompleteAt     int64
@@ -47,8 +47,7 @@ func (t *Translation) State() string {
 	return TranslationStateComplete
 }
 
-// NewTranslationFromRequest creates a new Translation from a
-// TranslationRequest
+// NewTranslationFromRequest returns a new Translation from a TranslationRequest.
 func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translation {
 	teamName := translationRequest.Team
 	if translationRequest.Type != MattermostWorkspaceBackupType {
@@ -56,7 +55,6 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 	}
 
 	return &Translation{
-		ID:             NewID(),
 		InstallationID: translationRequest.InstallationID,
 		Type:           translationRequest.Type,
 		Resource:       translationRequest.Archive,
