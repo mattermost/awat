@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 	"io"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -23,6 +24,27 @@ type TranslationRequest struct {
 	InstallationID string
 	Archive        string
 	Team           string
+}
+
+// Validate validates the values of a translation create request.
+func (request *TranslationRequest) Validate() error {
+	if len(request.InstallationID) == 0 {
+		return errors.New("must specify installation ID")
+	}
+	if len(request.Type) == 0 {
+		return errors.New("must specify backup type")
+	}
+	if request.Type == SlackWorkspaceBackupType && len(request.Team) == 0 {
+		return errors.New("must specify team with slack buckup type")
+	}
+	if !strings.HasSuffix(request.Archive, ".zip") {
+		return errors.New("archive must be a valid zip file")
+	}
+	if len(request.Archive) == 4 {
+		return errors.New("zip archive has no filename")
+	}
+
+	return nil
 }
 
 type TranslationMetadata struct {
@@ -43,6 +65,12 @@ func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, err
 	if err != nil && err != io.EOF {
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
+
+	err = request.Validate()
+	if err != nil {
+		return nil, errors.Wrap(err, "translation request failed validation")
+	}
+
 	return &request, nil
 }
 
