@@ -96,6 +96,7 @@ var migrations = []migration{
 			}
 			defer uploadRows.Close()
 
+			var uploadUpdates []string
 			for uploadRows.Next() {
 				var id string
 				var createAt, completeAt int64
@@ -103,14 +104,17 @@ var migrations = []migration{
 				if err != nil {
 					return err
 				}
-				_, err = e.Exec(fmt.Sprintf(`UPDATE upload SET CreateAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(completeAt), id))
-				if err != nil {
-					return err
-				}
+				uploadUpdates = append(uploadUpdates, fmt.Sprintf(`UPDATE upload SET CreateAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(completeAt), id))
 			}
 			err = uploadRows.Err()
 			if err != nil {
 				return err
+			}
+			for _, update := range uploadUpdates {
+				_, err = e.Exec(update)
+				if err != nil {
+					return err
+				}
 			}
 
 			translationRows, err := e.Query(`SELECT ID, CreateAt, StartAt, CompleteAt FROM translation;`)
@@ -119,6 +123,7 @@ var migrations = []migration{
 			}
 			defer translationRows.Close()
 
+			var translationUpdates []string
 			for translationRows.Next() {
 				var id string
 				var createAt, startAt, completeAt int64
@@ -126,16 +131,20 @@ var migrations = []migration{
 				if err != nil {
 					return err
 				}
-				_, err = e.Exec(fmt.Sprintf(`UPDATE translation SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
-				if err != nil {
-					return err
-				}
+				translationUpdates = append(translationUpdates, fmt.Sprintf(`UPDATE translation SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
 			}
 			err = translationRows.Err()
 			if err != nil {
 				return err
 			}
+			for _, update := range translationUpdates {
+				_, err = e.Exec(update)
+				if err != nil {
+					return err
+				}
+			}
 
+			var importUpdates []string
 			importRows, err := e.Query(`SELECT ID, CreateAt, StartAt, CompleteAt FROM import;`)
 			if err != nil {
 				return err
@@ -149,14 +158,17 @@ var migrations = []migration{
 				if err != nil {
 					return err
 				}
-				_, err = e.Exec(fmt.Sprintf(`UPDATE import SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
-				if err != nil {
-					return err
-				}
+				importUpdates = append(importUpdates, fmt.Sprintf(`UPDATE import SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
 			}
 			err = importRows.Err()
 			if err != nil {
 				return err
+			}
+			for _, update := range importUpdates {
+				_, err = e.Exec(update)
+				if err != nil {
+					return err
+				}
 			}
 
 			return nil
