@@ -40,7 +40,7 @@ func (request *TranslationRequest) Validate() error {
 	if !strings.HasSuffix(request.Archive, ".zip") {
 		return errors.New("archive must be a valid zip file")
 	}
-	if len(request.Archive) == 4 {
+	if request.Archive == ".zip" {
 		return errors.New("zip archive has no filename")
 	}
 
