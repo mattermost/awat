@@ -5,8 +5,6 @@
 package store
 
 import (
-	"fmt"
-
 	"github.com/blang/semver"
 )
 
@@ -83,92 +81,19 @@ var migrations = []migration{
 	},
 	{semver.MustParse("0.2.0"), semver.MustParse("0.3.0"),
 		func(e execer) error {
-			m := func(i int64) int64 {
-				if i == 0 {
-					return 0
-				}
-				return i / 1000
-			}
-
-			uploadRows, err := e.Query(`SELECT ID, CreateAt, CompleteAt FROM upload;`)
+			_, err := e.Exec(`UPDATE upload SET createat = createat / 1000, completeat = completeat / 1000;`)
 			if err != nil {
 				return err
 			}
-			defer uploadRows.Close()
 
-			var uploadUpdates []string
-			for uploadRows.Next() {
-				var id string
-				var createAt, completeAt int64
-				err := uploadRows.Scan(&id, &createAt, &completeAt)
-				if err != nil {
-					return err
-				}
-				uploadUpdates = append(uploadUpdates, fmt.Sprintf(`UPDATE upload SET CreateAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(completeAt), id))
-			}
-			err = uploadRows.Err()
+			_, err = e.Exec(`UPDATE translation SET createat = createat / 1000, startat = startat / 1000, completeat = completeat / 1000;`)
 			if err != nil {
 				return err
 			}
-			for _, update := range uploadUpdates {
-				_, err = e.Exec(update)
-				if err != nil {
-					return err
-				}
-			}
 
-			translationRows, err := e.Query(`SELECT ID, CreateAt, StartAt, CompleteAt FROM translation;`)
+			_, err = e.Exec(`UPDATE import SET createat = createat / 1000, startat = startat / 1000, completeat = completeat / 1000;`)
 			if err != nil {
 				return err
-			}
-			defer translationRows.Close()
-
-			var translationUpdates []string
-			for translationRows.Next() {
-				var id string
-				var createAt, startAt, completeAt int64
-				err := translationRows.Scan(&id, &createAt, &startAt, &completeAt)
-				if err != nil {
-					return err
-				}
-				translationUpdates = append(translationUpdates, fmt.Sprintf(`UPDATE translation SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
-			}
-			err = translationRows.Err()
-			if err != nil {
-				return err
-			}
-			for _, update := range translationUpdates {
-				_, err = e.Exec(update)
-				if err != nil {
-					return err
-				}
-			}
-
-			var importUpdates []string
-			importRows, err := e.Query(`SELECT ID, CreateAt, StartAt, CompleteAt FROM import;`)
-			if err != nil {
-				return err
-			}
-			defer importRows.Close()
-
-			for importRows.Next() {
-				var id string
-				var createAt, startAt, completeAt int64
-				err := importRows.Scan(&id, &createAt, &startAt, &completeAt)
-				if err != nil {
-					return err
-				}
-				importUpdates = append(importUpdates, fmt.Sprintf(`UPDATE import SET CreateAt = %d, StartAt = %d, CompleteAt = %d WHERE ID = '%s';`, m(createAt), m(startAt), m(completeAt), id))
-			}
-			err = importRows.Err()
-			if err != nil {
-				return err
-			}
-			for _, update := range importUpdates {
-				_, err = e.Exec(update)
-				if err != nil {
-					return err
-				}
 			}
 
 			return nil
