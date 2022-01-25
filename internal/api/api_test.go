@@ -112,7 +112,7 @@ func TestTranslations(t *testing.T) {
 
 	t.Run("start a new translation", func(t *testing.T) {
 		store.EXPECT().
-			StoreTranslation(
+			CreateTranslation(
 				// a more specific expectation could be applied here, but it
 				// doesn't seem worth the time to define a Matcher and get it
 				// all working just to ignore the nondeterministic ID that's

@@ -86,7 +86,7 @@ func (s *ImportSupervisor) supervise() {
 			continue
 		}
 
-		i.CompleteAt = model.Timestamp()
+		i.CompleteAt = model.GetMillis()
 		err = s.store.UpdateImport(i)
 		if err != nil {
 			logger.WithError(err).Error("Failed to mark import as completed")

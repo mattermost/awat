@@ -90,7 +90,7 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 		return nil, errors.Wrapf(err, "failed to lock Import %s", imprt.ID)
 	}
 
-	imprt.StartAt = model.Timestamp()
+	imprt.StartAt = model.GetMillis()
 	err = sqlStore.UpdateImport(imprt)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to mark Import %s as started", imprt.ID)
@@ -99,16 +99,19 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 	return imprt, nil
 }
 
-// StoreImport writes the input Import to the database
-func (sqlStore *SQLStore) StoreImport(imp *model.Import) error {
+// CreateImport stores a new import.
+func (sqlStore *SQLStore) CreateImport(imp *model.Import) error {
+	imp.ID = model.NewID()
+	imp.CreateAt = model.GetMillis()
+
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(ImportTableName).
 		SetMap(map[string]interface{}{
-			"CreateAt":      model.Timestamp(),
-			"CompleteAt":    imp.CompleteAt,
 			"ID":            imp.ID,
-			"LockedBy":      imp.LockedBy,
+			"CreateAt":      imp.CreateAt,
 			"StartAt":       imp.StartAt,
+			"CompleteAt":    imp.CompleteAt,
+			"LockedBy":      imp.LockedBy,
 			"TranslationID": imp.TranslationID,
 			"Resource":      imp.Resource,
 			"Error":         imp.Error,

@@ -81,7 +81,7 @@ func (s *TranslationSupervisor) supervise() {
 		return
 	}
 
-	translation.StartAt = model.Timestamp()
+	translation.StartAt = model.GetMillis()
 	err = s.store.UpdateTranslation(translation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to mark translation as started")
@@ -94,7 +94,7 @@ func (s *TranslationSupervisor) supervise() {
 		return
 	}
 
-	translation.CompleteAt = model.Timestamp()
+	translation.CompleteAt = model.GetMillis()
 	err = s.store.UpdateTranslation(translation)
 	if err != nil {
 		logger.WithError(err).Error("Failed to mark translation as completed")
@@ -103,7 +103,7 @@ func (s *TranslationSupervisor) supervise() {
 
 	importResource := fmt.Sprintf("%s/%s", s.bucket, output)
 	imp := model.NewImport(translation.ID, importResource)
-	err = s.store.StoreImport(imp)
+	err = s.store.CreateImport(imp)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create an import for translation")
 		return

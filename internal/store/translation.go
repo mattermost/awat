@@ -110,17 +110,18 @@ func (sqlStore *SQLStore) GetTranslationReadyToStart() (*model.Translation, erro
 	return translations[0], nil
 }
 
-// StoreTranslation saves the specified Translation to the database,
-// assuming it is new
-func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error {
+// CreateTranslation stores a new translation.
+func (sqlStore *SQLStore) CreateTranslation(translation *model.Translation) error {
+	translation.ID = model.NewID()
+	translation.CreateAt = model.GetMillis()
+
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(TranslationTableName).
 		SetMap(map[string]interface{}{
-			"CompleteAt": translation.CompleteAt,
-			"CreateAt":   model.Timestamp(),
-			"StartAt":    translation.StartAt,
-
 			"ID":             translation.ID,
+			"CreateAt":       translation.CreateAt,
+			"StartAt":        translation.StartAt,
+			"CompleteAt":     translation.CompleteAt,
 			"InstallationID": translation.InstallationID,
 			"LockedBy":       translation.LockedBy,
 			"Resource":       translation.Resource,
@@ -132,16 +133,14 @@ func (sqlStore *SQLStore) StoreTranslation(translation *model.Translation) error
 	return err
 }
 
-// UpdateTranslation stores changes to the input translation in the
-// database
+// UpdateTranslation stores changes to the provided translation in the database.
 func (sqlStore *SQLStore) UpdateTranslation(translation *model.Translation) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Update(TranslationTableName).
 		SetMap(map[string]interface{}{
-			"CompleteAt": translation.CompleteAt,
-			"CreateAt":   translation.CreateAt,
-			"StartAt":    translation.StartAt,
-
+			"CompleteAt":     translation.CompleteAt,
+			"CreateAt":       translation.CreateAt,
+			"StartAt":        translation.StartAt,
 			"ID":             translation.ID,
 			"InstallationID": translation.InstallationID,
 			"LockedBy":       translation.LockedBy,

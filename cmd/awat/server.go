@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/mattermost/awat/internal/api"
+	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/supervisor"
 	"github.com/mattermost/mattermost-cloud/model"
 )
@@ -75,6 +76,18 @@ var serverCmd = &cobra.Command{
 		sqlStore, err := sqlStore(command)
 		if err != nil {
 			return err
+		}
+
+		currentVersion, err := sqlStore.GetCurrentVersion()
+		if err != nil {
+			return err
+		}
+		serverVersion := store.LatestVersion()
+
+		// Require the schema to be at least the server version, and also the same major
+		// version.
+		if currentVersion.LT(serverVersion) || currentVersion.Major != serverVersion.Major {
+			return errors.Errorf("server requires at least schema %s, current is %s", serverVersion, currentVersion)
 		}
 
 		bucket, _ := command.Flags().GetString(bucketFlag)

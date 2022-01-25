@@ -79,4 +79,24 @@ var migrations = []migration{
 			return err
 		},
 	},
+	{semver.MustParse("0.2.0"), semver.MustParse("0.3.0"),
+		func(e execer) error {
+			_, err := e.Exec(`UPDATE upload SET createat = createat / 1000, completeat = completeat / 1000;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`UPDATE translation SET createat = createat / 1000, startat = startat / 1000, completeat = completeat / 1000;`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`UPDATE import SET createat = createat / 1000, startat = startat / 1000, completeat = completeat / 1000;`)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	},
 }

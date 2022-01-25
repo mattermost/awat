@@ -53,7 +53,7 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = c.Store.StoreTranslation(translation)
+	err = c.Store.CreateTranslation(translation)
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to store the translation request in the database")
 		w.WriteHeader(http.StatusInternalServerError)

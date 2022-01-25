@@ -78,18 +78,18 @@ func (mr *MockStoreMockRecorder) GetAllTranslations() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTranslations", reflect.TypeOf((*MockStore)(nil).GetAllTranslations))
 }
 
-// StoreTranslation mocks base method
-func (m *MockStore) StoreTranslation(t *model.Translation) error {
+// CreateTranslation mocks base method
+func (m *MockStore) CreateTranslation(t *model.Translation) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StoreTranslation", t)
+	ret := m.ctrl.Call(m, "CreateTranslation", t)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// StoreTranslation indicates an expected call of StoreTranslation
-func (mr *MockStoreMockRecorder) StoreTranslation(t interface{}) *gomock.Call {
+// CreateTranslation indicates an expected call of CreateTranslation
+func (mr *MockStoreMockRecorder) CreateTranslation(t interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StoreTranslation", reflect.TypeOf((*MockStore)(nil).StoreTranslation), t)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTranslation", reflect.TypeOf((*MockStore)(nil).CreateTranslation), t)
 }
 
 // UpdateTranslation mocks base method
