@@ -25,21 +25,23 @@ import (
 )
 
 const (
-	databaseFlag     = "database"
-	listenFlag       = "listen"
-	bucketFlag       = "bucket"
-	workingDirectory = "workdir"
-	serverFlag       = "server"
-	provisionerFlag  = "provisioner"
-	debugFlag        = "debug"
+	databaseFlag         = "database"
+	listenFlag           = "listen"
+	bucketFlag           = "bucket"
+	workingDirectoryFlag = "workdir"
+	serverFlag           = "server"
+	provisionerFlag      = "provisioner"
+	debugFlag            = "debug"
+	keepImportDataFlag   = "keep-import-data"
 )
 
 func init() {
 	serverCmd.PersistentFlags().String(listenFlag, "localhost:8077", "Local interface and port to listen on")
 	serverCmd.PersistentFlags().String(bucketFlag, "", "S3 URI where the input can be found")
-	serverCmd.PersistentFlags().String(workingDirectory, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
+	serverCmd.PersistentFlags().String(workingDirectoryFlag, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
 	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
+	serverCmd.PersistentFlags().Bool(keepImportDataFlag, true, "Whether to preserve import bundles after import completion or not")
 	serverCmd.PersistentFlags().Bool(debugFlag, true, "Whether to output debug logs")
 	serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
@@ -59,7 +61,7 @@ var serverCmd = &cobra.Command{
 			return errors.New("the server command requires the --listen flag not be empty")
 		}
 
-		workdir, _ := command.Flags().GetString(workingDirectory)
+		workdir, _ := command.Flags().GetString(workingDirectoryFlag)
 		if workdir == "" {
 			return errors.New("the server command requires the --workdir flag not be empty")
 		}
@@ -92,13 +94,15 @@ var serverCmd = &cobra.Command{
 
 		bucket, _ := command.Flags().GetString(bucketFlag)
 		provisionerURL, _ := command.Flags().GetString(provisionerFlag)
+		keepImportData, _ := command.Flags().GetBool(keepImportDataFlag)
 
 		logger.WithFields(logrus.Fields{
-			"build-hash":  model.BuildHash,
-			"provisioner": provisionerURL,
-			"bucket":      bucket,
-			"workdir":     workdir,
-			"debug":       debug,
+			"build-hash":         model.BuildHash,
+			provisionerFlag:      provisionerURL,
+			bucketFlag:           bucket,
+			workingDirectoryFlag: workdir,
+			keepImportDataFlag:   keepImportData,
+			debugFlag:            debug,
 		}).Info("Starting AWAT Server")
 
 		cloud, err := buildCloudClientAndCheckConnectivity(provisionerURL)
@@ -114,7 +118,7 @@ var serverCmd = &cobra.Command{
 		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
 		translationSupervisor.Start()
 
-		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloud, bucket)
+		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloud, bucket, keepImportData)
 		importSupervisor.Start()
 
 		router := mux.NewRouter()
