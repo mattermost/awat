@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/mattermost/awat/model"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,13 @@ func TestTransformSlack(t *testing.T) {
 		StartAt:        time.Now().UnixNano() / 1000,
 		CompleteAt:     0,
 		LockedBy:       "",
-	}, "../../test/dummy-slack-workspace-archive.zip", mbifOutputFile.Name(), tempDir+"/attachments", tempDir)
+	},
+		"../../test/dummy-slack-workspace-archive.zip",
+		mbifOutputFile.Name(),
+		tempDir+"/attachments",
+		tempDir,
+		log.New(),
+	)
 
 	require.NoError(t, err)
 	mbifOutputFile.Close()

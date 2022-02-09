@@ -18,11 +18,12 @@ import (
 )
 
 type ImportSupervisor struct {
-	logger    log.FieldLogger
-	store     importStore
-	cloud     *cloud.Client
-	bucket    string
-	awsConfig *aws.Config
+	logger         log.FieldLogger
+	store          importStore
+	cloud          *cloud.Client
+	awsConfig      *aws.Config
+	bucket         string
+	keepImportData bool
 }
 
 type importStore interface {
@@ -31,12 +32,13 @@ type importStore interface {
 	UpdateImport(imp *model.Import) error
 }
 
-func NewImportSupervisor(store importStore, logger log.FieldLogger, cloudClient *cloud.Client, bucket string) *ImportSupervisor {
+func NewImportSupervisor(store importStore, logger log.FieldLogger, cloudClient *cloud.Client, bucket string, keepImportData bool) *ImportSupervisor {
 	return &ImportSupervisor{
-		logger: logger,
-		store:  store,
-		cloud:  cloudClient,
-		bucket: bucket,
+		logger:         logger,
+		store:          store,
+		cloud:          cloudClient,
+		bucket:         bucket,
+		keepImportData: keepImportData,
 	}
 }
 
@@ -65,7 +67,6 @@ func (s *ImportSupervisor) supervise() {
 		}
 
 		logger := s.logger.WithFields(log.Fields{"translation": translation.ID, "installation": translation.InstallationID})
-		logger.Info("Checking on import progress")
 
 		installation, err := s.cloud.GetInstallation(
 			translation.InstallationID,
@@ -90,6 +91,13 @@ func (s *ImportSupervisor) supervise() {
 		err = s.store.UpdateImport(i)
 		if err != nil {
 			logger.WithError(err).Error("Failed to mark import as completed")
+			return
+		}
+
+		logger.Info("Import completed")
+
+		if s.keepImportData {
+			logger.Debug("Skipping import bundle cleanup")
 			return
 		}
 

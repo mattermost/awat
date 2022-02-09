@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/mattermost/awat/model"
 )
@@ -43,7 +43,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	}
 	defer os.RemoveAll(workdir)
 
-	logger := logrus.New()
+	logger := log.New()
 
 	inputArchiveName, err := st.fetchSlackArchive(logger, workdir, translation.Resource)
 	if err != nil {
@@ -66,6 +66,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 		mbifName,
 		attachmentDirName,
 		workdir,
+		logger,
 	)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to transform Slack archive to MBIF")
@@ -94,7 +95,7 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 // fetchSlackArchive is responsible for downloading the input archive
 // from S3 and writing it out to workdir, which is assumed to be of
 // sufficient capacity for the archive
-func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir, resource string) (string, error) {
+func (st *SlackTranslator) fetchSlackArchive(logger log.FieldLogger, workdir, resource string) (string, error) {
 	sess := session.Must(session.NewSession())
 
 	downloader := s3manager.NewDownloader(sess)
@@ -128,7 +129,7 @@ func (st *SlackTranslator) fetchSlackArchive(logger logrus.FieldLogger, workdir,
 // addFilesToSlackArchive prepares the input and fetches attached
 // files, writing the output to workdir and removing the input archive
 // when complete
-func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, workdir, attachmentDirName, inputArchiveName string) (string, error) {
+func (st *SlackTranslator) addFilesToSlackArchive(logger log.FieldLogger, workdir, attachmentDirName, inputArchiveName string) (string, error) {
 	defer func() {
 		err := os.Remove(inputArchiveName)
 		if err != nil {
@@ -158,7 +159,7 @@ func (st *SlackTranslator) addFilesToSlackArchive(logger logrus.FieldLogger, wor
 
 // createOutputZip file compresses the output from the Translate
 // process into a .zip that can be injested by Mattermost
-func (st *SlackTranslator) createOutputZipfile(logger logrus.FieldLogger, attachmentDirName, mbifName, translationID string) (string, error) {
+func (st *SlackTranslator) createOutputZipfile(logger log.FieldLogger, attachmentDirName, mbifName, translationID string) (string, error) {
 	output, err := os.Create(fmt.Sprintf("%s/%s.zip", st.workingDir, translationID))
 	if err != nil {
 		return "", err

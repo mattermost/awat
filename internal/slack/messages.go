@@ -6,13 +6,14 @@ package slack
 
 import (
 	"archive/zip"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mattermost/awat/model"
 	mmetl "github.com/mattermost/mmetl/services/slack"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 // TransformSlack takes a absolute filepath inputFilePath which points
@@ -21,8 +22,9 @@ import (
 // in the JSONL lines that make up the MBIF referring to any attached
 // files in attachmentsDir. The attached files will also be extracted
 // from the file at inputFilePath and stored in attachmentsDir
-func TransformSlack(translation *model.Translation, inputFilePath, outputFilePath, attachmentsDir, workdir string) error {
-	// input file
+func TransformSlack(translation *model.Translation, inputFilePath, outputFilePath, attachmentsDir, workdir string, logger log.FieldLogger) error {
+	logger.Debug("Reading zip file")
+
 	fileReader, err := os.Open(inputFilePath)
 	if err != nil {
 		return err
@@ -35,9 +37,11 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 	}
 
 	zipReader, err := zip.NewReader(fileReader, zipFileInfo.Size())
-	if err != nil || zipReader.File == nil {
+	if err != nil {
 		return err
 	}
+
+	logger.Debug("Running mmetl transformation processes")
 
 	slackExport, err := mmetl.ParseSlackExportFile(translation.Team, zipReader, false)
 	if err != nil {
@@ -65,10 +69,11 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 	// this total may include bots
 	translation.Users = len(intermediate.UsersById)
 
-	if err = mmetl.Export(translation.Team, intermediate, outputFilePath); err != nil {
-		return err
+	err = mmetl.Export(translation.Team, intermediate, outputFilePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to run mmetl export")
 	}
 
-	log.Println("Transformation succeeded")
+	logger.Info("Transformation succeeded")
 	return nil
 }
