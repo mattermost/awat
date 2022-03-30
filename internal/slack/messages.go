@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// TransformSlack takes a absolute filepath inputFilePath which points
+// TransformSlack takes an absolute filepath inputFilePath which points
 // to a Slack workspace archive which already contains file
 // attachments and outputs an MBIF to outputFilePath with references
 // in the JSONL lines that make up the MBIF referring to any attached
@@ -43,20 +43,27 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 
 	logger.Debug("Running mmetl transformation processes")
 
-	slackExport, err := mmetl.ParseSlackExportFile(translation.Team, zipReader, false)
+	slackTransformer := mmetl.NewTransformer(translation.Team, logger)
+
+	slackExport, err := slackTransformer.ParseSlackExportFile(zipReader, false)
 	if err != nil {
 		return err
 	}
 
-	intermediate, err := mmetl.Transform(slackExport, attachmentsDir, false, true)
+	err = slackTransformer.Transform(slackExport, attachmentsDir, false, true)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to transform slack export")
+	}
+
+	err = validateIntermediate(slackTransformer.Intermediate)
+	if err != nil {
+		return errors.Wrap(err, "slack transformation failed validation")
 	}
 
 	// TODO maybe change mmetl to include the correct paths during
 	// Transform -- however this seems to be fairly involved so for now
 	// just fix these paths after the fact
-	for _, post := range intermediate.Posts {
+	for _, post := range slackTransformer.Intermediate.Posts {
 		for i, attachment := range post.Attachments {
 			path, err := filepath.Abs("/data" + strings.TrimPrefix(attachment, workdir))
 			if err != nil {
@@ -66,14 +73,25 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 		}
 	}
 
-	// this total may include bots
-	translation.Users = len(intermediate.UsersById)
-
-	err = mmetl.Export(translation.Team, intermediate, outputFilePath)
+	err = slackTransformer.Export(outputFilePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to run mmetl export")
 	}
 
+	// this total may include bots
+	translation.Users = len(slackTransformer.Intermediate.UsersById)
+
 	logger.Info("Transformation succeeded")
+	return nil
+}
+
+func validateIntermediate(intermediate *mmetl.Intermediate) error {
+	if len(intermediate.UsersById) == 0 {
+		return errors.New("slack translation resulted in 0 users")
+	}
+	if len(intermediate.Posts) == 0 {
+		return errors.New("slack translation resulted in 0 posts")
+	}
+
 	return nil
 }

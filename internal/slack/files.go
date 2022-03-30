@@ -7,7 +7,6 @@ package slack
 import (
 	"archive/zip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -27,14 +26,14 @@ func FetchAttachedFiles(logger logrus.FieldLogger, inputArchive string, outputAr
 	// Open the input archive.
 	r, err := zip.OpenReader(inputArchive)
 	if err != nil {
-		return fmt.Errorf("could not open input archive for reading: %s\n", inputArchive)
+		return errors.Wrapf(err, "failed to open input archive %s for reading", inputArchive)
 	}
 	defer r.Close()
 
 	// Open the output archive.
 	f, err := os.Create(outputArchive)
 	if err != nil {
-		return fmt.Errorf("could not open the output archive for writing: %s\n\n%s", outputArchive, err)
+		return errors.Wrapf(err, "failed to create output archive %s for writing", outputArchive)
 	}
 	defer f.Close()
 

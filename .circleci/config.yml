@@ -2,7 +2,7 @@ version: 2.1
 executors:
   default:
     docker:
-    - image: cimg/go:1.17.6
+    - image: cimg/go:1.17.8
 
 aliases:
 - &restore_cache
