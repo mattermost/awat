@@ -136,8 +136,6 @@ func (c *Client) GetAllTranslations() ([]*TranslationStatus, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return NewTranslationStatusListFromReader(resp.Body)
-	case http.StatusNotFound:
-		return nil, nil
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -156,8 +154,6 @@ func (c *Client) GetAllImports() ([]*ImportStatus, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return NewImportStatusListFromReader(resp.Body)
-	case http.StatusNotFound:
-		return nil, nil
 
 	default:
 		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
@@ -231,26 +227,6 @@ func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
 	switch resp.StatusCode {
 	case http.StatusOK:
 		return NewImportStatusFromReader(resp.Body)
-	case http.StatusNotFound:
-		return nil, nil
-
-	default:
-		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
-	}
-}
-
-// ListImports returns all Imports on the AWAT
-// TODO pagination
-func (c *Client) ListImports() ([]*ImportStatus, error) {
-	resp, err := c.doGet(c.buildURL("/imports"))
-	if err != nil {
-		return nil, err
-	}
-	defer closeBody(resp)
-
-	switch resp.StatusCode {
-	case http.StatusOK:
-		return NewImportStatusListFromReader(resp.Body)
 	case http.StatusNotFound:
 		return nil, nil
 
