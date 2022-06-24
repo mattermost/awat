@@ -80,11 +80,9 @@ var getImportByIDCmd = &cobra.Command{
 
 		if status == nil {
 			fmt.Printf("No Import found with ID %s", imprt)
-		} else {
-			printJSON(status)
+			return nil
 		}
-
-		return nil
+		return printJSON(status)
 	},
 }
 
