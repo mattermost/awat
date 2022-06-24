@@ -67,7 +67,8 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	c.Logger.WithFields(logrus.Fields{
 		"installation": translation.InstallationID,
 		"resource":     translation.Resource,
-	}).Debugf("Started new translation with ID %s", translation.ID)
+		"translation":  translation.ID,
+	}).Debug("Started new translation")
 }
 
 // handleGetTranslationStatus responds to GET /translation/{id} with

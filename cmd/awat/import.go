@@ -80,13 +80,9 @@ var getImportByIDCmd = &cobra.Command{
 
 		if status == nil {
 			fmt.Printf("No Import found with ID %s", imprt)
+			return nil
 		}
-
-		if status != nil {
-			_ = printJSON(status)
-		}
-
-		return nil
+		return printJSON(status)
 	},
 }
 
@@ -115,17 +111,9 @@ var listImportCmd = &cobra.Command{
 		server, _ := cmd.Flags().GetString(serverFlag)
 		awat := model.NewClient(server)
 
-		var err error
-		var statuses []*model.ImportStatus
-		statuses, err = awat.ListImports()
-
+		statuses, err := awat.GetAllImports()
 		if err != nil {
 			return err
-		}
-
-		if len(statuses) == 0 {
-			fmt.Println("No imports found")
-			return nil
 		}
 
 		return printJSON(statuses)

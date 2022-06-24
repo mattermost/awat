@@ -21,7 +21,8 @@ import (
 	"github.com/mattermost/awat/internal/api"
 	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/supervisor"
-	"github.com/mattermost/mattermost-cloud/model"
+	"github.com/mattermost/awat/model"
+	cmodel "github.com/mattermost/mattermost-cloud/model"
 )
 
 const (
@@ -165,8 +166,8 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-func buildCloudClientAndCheckConnectivity(provisionerURL string) (*model.Client, error) {
-	cloudClient := model.NewClient(provisionerURL)
+func buildCloudClientAndCheckConnectivity(provisionerURL string) (*cmodel.Client, error) {
+	cloudClient := cmodel.NewClient(provisionerURL)
 	_, err := cloudClient.GetInstallationsCount(false)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to check provisioner connectivity")
