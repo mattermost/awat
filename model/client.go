@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -306,8 +307,8 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 	return c.httpClient.Do(req)
 }
 
-// Uploads the file specified as an argument to S3 via the AWAT
-func (c *Client) UploadArchiveForTranslation(filename string) (*http.Response, error) {
+// UploadArchiveForTranslation uploads the file specified as an argument to S3 via the AWAT
+func (c *Client) UploadArchiveForTranslation(filename string) ([]byte, error) {
 	inputFile, err := os.Open(filename)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read input file %s", filename)
@@ -317,25 +318,39 @@ func (c *Client) UploadArchiveForTranslation(filename string) (*http.Response, e
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create HTTP request")
 	}
+
 	req.Header.Set("Content-Type", "application/octet-stream")
 	stat, err := inputFile.Stat()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to determine file stats for %s", inputFile.Name())
 	}
+
 	size := stat.Size()
 	if size == 0 {
 		return nil, errors.New("provided file appears to be empty")
 	}
+
 	req.ContentLength = size
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send HTTP request to AWAT")
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+
 	if resp.StatusCode != http.StatusAccepted {
-		return resp, errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
+		return nil, errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
 	}
-	return resp, err
+
+	archiveBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("failed to read response body")
+	}
+
+	return archiveBytes, nil
 }
 
 func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {

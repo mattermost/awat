@@ -7,8 +7,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 
@@ -149,21 +147,17 @@ var startTranslationCmd = &cobra.Command{
 		var err error
 		upload, _ := cmd.Flags().GetBool(uploadFile)
 		if upload {
-			resp, err := awat.UploadArchiveForTranslation(archive)
+			archiveBytes, err := awat.UploadArchiveForTranslation(archive)
 			if err != nil {
 				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
-			if resp.StatusCode != http.StatusAccepted {
-				return errors.Errorf("unexpected response from AWAT %d", resp.StatusCode)
-			}
 
-			archiveBytes, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return errors.New("failed to retrieve archive input name from AWAT")
-			}
 			archive = string(archiveBytes)
 			uploadID := strings.TrimSuffix(archive, ".zip")
-			awat.WaitForUploadToComplete(uploadID)
+
+			if err := awat.WaitForUploadToComplete(uploadID); err != nil {
+				return err
+			}
 		}
 
 		var status *model.TranslationStatus
