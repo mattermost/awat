@@ -147,13 +147,12 @@ var startTranslationCmd = &cobra.Command{
 		var err error
 		upload, _ := cmd.Flags().GetBool(uploadFile)
 		if upload {
-			archiveBytes, err := awat.UploadArchiveForTranslation(archive)
+			archiveID, err := awat.UploadArchiveForTranslation(archive)
 			if err != nil {
 				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
 
-			archive = string(archiveBytes)
-			uploadID := strings.TrimSuffix(archive, ".zip")
+			uploadID := strings.TrimSuffix(archiveID, ".zip")
 
 			if err := awat.WaitForUploadToComplete(uploadID); err != nil {
 				return err
