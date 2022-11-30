@@ -351,7 +351,7 @@ func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
 	}
 
 	if archiveBytes == nil {
-		return "", errors.New("invalid archive id")
+		return "", errors.New("invalid response data")
 	}
 
 	return string(archiveBytes), nil

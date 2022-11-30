@@ -155,7 +155,7 @@ var startTranslationCmd = &cobra.Command{
 			uploadID := strings.TrimSuffix(archiveID, ".zip")
 
 			if err := awat.WaitForUploadToComplete(uploadID); err != nil {
-				return err
+				return errors.Wrapf(err, "failed to upload %s", uploadID)
 			}
 		}
 
