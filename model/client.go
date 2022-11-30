@@ -345,16 +345,16 @@ func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
 		return "", errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
 	}
 
-	archiveBytes, err := io.ReadAll(resp.Body)
+	archiveNameBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.New("failed to read response body")
 	}
 
-	if archiveBytes == nil {
+	if archiveNameBytes == nil {
 		return "", errors.New("invalid response data")
 	}
 
-	return string(archiveBytes), nil
+	return string(archiveNameBytes), nil
 }
 
 func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
