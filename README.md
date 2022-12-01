@@ -25,13 +25,15 @@ Usage:
 Flags:
       --bucket string        S3 URI where the input can be found
       --database string      Location of a Postgres database for the server to use (default "postgres://localhost:5435")
+      --debug                Whether to output debug logs (default true)
   -h, --help                 help for server
+      --keep-import-data     Whether to preserve import bundles after import completion or not (default true)
       --listen string        Local interface and port to listen on (default "localhost:8077")
       --provisioner string   Address of the Provisioner (default "http://localhost:8075")
       --workdir string       The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted. (default "/tmp/awat/workdir")
 ```
 
-Running the AWAT Server requires an S3 bucket (`--bucket`), a large volume for unpacking archives (`--workdir`), a Postgres database (`--server`), and a Cloud Proivisioner to communicate with (`--provisioner`).
+Running the AWAT Server requires an S3 bucket (`--bucket`), a large volume for unpacking archives (`--workdir`), a Postgres database (`--database`), and a Cloud Proivisioner to communicate with (`--provisioner`).
 
 Example usage:
 
