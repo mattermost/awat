@@ -1,6 +1,6 @@
 module github.com/mattermost/awat
 
-go 1.17
+go 1.19
 
 require (
 	github.com/Masterminds/squirrel v1.5.2
