@@ -13,10 +13,28 @@ import (
 )
 
 const (
-	ImportStateRequested  = "import-requested"
-	ImportStateInProgress = "import-in-progress"
-	ImportStateComplete   = "import-complete"
+	ImportStateRequested                  = "import-requested"
+	ImportStateInstallationPreAdjustment  = "installation-pre-adjustment"
+	ImportStateInProgress                 = "import-in-progress"
+	ImportStateComplete                   = "import-complete"
+	ImportStateInstallationPostAdjustment = "installation-post-adjustment"
+	ImportStateSucceeded                  = "import-succeeded"
+	ImportStateFailed                     = "import-failed"
+
+	SizeCloud10Users  = "cloud10users"
+	Size1000String    = "1000users"
+	S3ExtendedTimeout = 48 * 60 * 60 * 1000
+	S3DefaultTimeout  = 10 * 60 * 1000
+	S3EnvKey          = "MM_FILESETTINGS_AMAZONS3REQUESTTIMEOUTMILLISECONDS"
 )
+
+var AllImportStatesPendingWork = []string{
+	ImportStateRequested,
+	ImportStateInstallationPreAdjustment,
+	ImportStateInProgress,
+	ImportStateComplete,
+	ImportStateInstallationPostAdjustment,
+}
 
 // Import represents a completed Translation that is being imported
 // into an Installation in order to track that process
@@ -27,7 +45,9 @@ type Import struct {
 	CreateAt      int64
 	StartAt       int64
 	CompleteAt    int64
+	State         string
 	LockedBy      string
+	ImportBy      string
 	Error         string
 }
 
@@ -51,6 +71,7 @@ func NewImport(translationID, importResource string) *Import {
 	return &Import{
 		TranslationID: translationID,
 		Resource:      importResource,
+		State:         ImportStateRequested,
 	}
 }
 
@@ -65,20 +86,6 @@ type ImportStatus struct {
 	Team           string
 	State          string
 	Type           BackupType
-}
-
-// State determines and returns the current state of the Import given
-// its metadata
-func (i *Import) State() string {
-	if i.CompleteAt != 0 {
-		return ImportStateComplete
-	}
-
-	if i.StartAt == 0 {
-		return ImportStateRequested
-	}
-
-	return ImportStateInProgress
 }
 
 // NewImportWorkRequestFromReader creates a ImportWorkRequest from a

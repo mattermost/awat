@@ -282,7 +282,7 @@ func TestImports(t *testing.T) {
 
 		store.EXPECT().
 			GetAndClaimNextReadyImport("provisionerID").
-			Return(&model.Import{ID: importID, TranslationID: translationID}, nil).
+			Return(&model.Import{ID: importID, TranslationID: translationID, State: model.ImportStateRequested}, nil).
 			Times(1)
 
 		store.EXPECT().
