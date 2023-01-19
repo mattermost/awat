@@ -70,7 +70,7 @@ func (s *TranslationSupervisor) supervise() {
 	}
 	defer s.store.UnlockTranslation(translation)
 
-	translator, err := translator.NewTranslator(
+	trans, err := translator.NewTranslator(
 		&translator.TranslatorOptions{
 			ArchiveType: translation.Type,
 			Bucket:      s.bucket,
@@ -88,7 +88,7 @@ func (s *TranslationSupervisor) supervise() {
 		return
 	}
 
-	output, err := translator.Translate(translation)
+	output, err := trans.Translate(translation)
 	if err != nil {
 		logger.WithError(err).Error("Failed translation")
 		return

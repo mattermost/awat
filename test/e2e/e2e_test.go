@@ -2,7 +2,8 @@
 // See LICENSE.txt for license information.
 //
 
-//+build e2e
+//go:build e2e
+// +build e2e
 
 package e2e
 
@@ -18,7 +19,6 @@ package e2e
 */
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,8 +26,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -42,12 +42,13 @@ const (
 	mattermostTeam    = "ad-1"
 )
 
-type environment struct {
-	awatURL     string
+type setting struct {
 	bucket      string
+	file        string
 	key         string
 	testDomain  string
 	provisioner *cloud.Client
+	awat        *model.Client
 }
 
 type completedEnvironment struct {
@@ -58,18 +59,17 @@ type completedEnvironment struct {
 }
 
 func TestTwoInQuickSuccession(t *testing.T) {
-	env := setupEnvironment(t, model.SlackWorkspaceBackupType)
+	settings := setupEnvironment(t, model.SlackWorkspaceBackupType)
 	installations := make([]*cloud.InstallationDTO, 2)
 	for i := range installations {
-		installations[i] = getInstallation(t, env)
+		installations[i] = getInstallation(t, settings)
 	}
 
-	client := model.NewClient(env.awatURL)
 	translationsChannel := make(chan *model.TranslationStatus, 2)
 	translations := make([]*model.TranslationStatus, 2)
 	for i := range installations {
 		go func(i int) {
-			translationsChannel <- startTranslation(t, client, installations[i], env, model.SlackWorkspaceBackupType)
+			translationsChannel <- startTranslation(t, settings.awat, installations[i], settings, model.SlackWorkspaceBackupType)
 		}(i)
 	}
 	for i := 0; i < 2; i++ {
@@ -79,7 +79,7 @@ func TestTwoInQuickSuccession(t *testing.T) {
 	translationsChannel = make(chan *model.TranslationStatus, 2)
 	for i := range translations {
 		go func(i int) {
-			translationsChannel <- waitForTranslationToSucceed(t, client, translations[i])
+			translationsChannel <- waitForTranslationToSucceed(t, settings.awat, translations[i])
 		}(i)
 	}
 	for i := 0; i < 2; i++ { // TODO write a helper function or two
@@ -89,7 +89,7 @@ func TestTwoInQuickSuccession(t *testing.T) {
 	done := make(chan bool, 2)
 	for i := range translations {
 		go func(i int) {
-			waitForImportToSucceed(t, translations[i], client, env.provisioner, installations[i])
+			waitForImportToSucceed(t, translations[i], settings.awat, settings.provisioner, installations[i])
 			done <- true
 		}(i)
 	}
@@ -101,7 +101,7 @@ func TestTwoInQuickSuccession(t *testing.T) {
 
 	for _, installation := range installations {
 		t.Logf("checking import into installation %s", installation.ID)
-		clusterInstallations, err := env.provisioner.GetClusterInstallations(
+		clusterInstallations, err := settings.provisioner.GetClusterInstallations(
 			&cloud.GetClusterInstallationsRequest{
 				Paging:         cloud.AllPagesNotDeleted(),
 				InstallationID: installation.ID,
@@ -112,7 +112,7 @@ func TestTwoInQuickSuccession(t *testing.T) {
 
 		completed := &completedEnvironment{
 			t:           t,
-			provisioner: env.provisioner,
+			provisioner: settings.provisioner,
 			target:      ci,
 			archiveType: model.SlackWorkspaceBackupType,
 		}
@@ -124,18 +124,16 @@ func TestTwoInQuickSuccession(t *testing.T) {
 }
 
 func TestSlackTranslationAndImport(t *testing.T) {
-	env := setupEnvironment(t, model.SlackWorkspaceBackupType)
-	installation := getInstallation(t, env)
-	client := model.NewClient(env.awatURL)
+	settings := setupEnvironment(t, model.SlackWorkspaceBackupType)
+	installation := getInstallation(t, settings)
+
 	ts := startTranslationAndWaitForItToSucceed(
-		t, client, installation,
-		env, model.SlackWorkspaceBackupType)
+		t, settings.awat, installation,
+		settings, model.SlackWorkspaceBackupType)
 
-	waitForImportToSucceed(t, ts, client, env.provisioner, installation)
+	waitForImportToSucceed(t, ts, settings.awat, settings.provisioner, installation)
 
-	t.Log("validate the import data was imported properly")
-
-	clusterInstallations, err := env.provisioner.GetClusterInstallations(
+	clusterInstallations, err := settings.provisioner.GetClusterInstallations(
 		&cloud.GetClusterInstallationsRequest{
 			Paging:         cloud.AllPagesNotDeleted(),
 			InstallationID: installation.ID,
@@ -146,7 +144,7 @@ func TestSlackTranslationAndImport(t *testing.T) {
 
 	completed := &completedEnvironment{
 		t:           t,
-		provisioner: env.provisioner,
+		provisioner: settings.provisioner,
 		target:      ci,
 		archiveType: model.SlackWorkspaceBackupType,
 	}
@@ -157,16 +155,16 @@ func TestSlackTranslationAndImport(t *testing.T) {
 }
 
 func TestMattermostImport(t *testing.T) {
-	env := setupEnvironment(t, model.MattermostWorkspaceBackupType)
-	installation := getInstallation(t, env)
-	client := model.NewClient(env.awatURL)
+	settings := setupEnvironment(t, model.MattermostWorkspaceBackupType)
+	installation := getInstallation(t, settings)
+
 	ts := startTranslationAndWaitForItToSucceed(
-		t, client, installation,
-		env, model.MattermostWorkspaceBackupType)
+		t, settings.awat, installation,
+		settings, model.MattermostWorkspaceBackupType)
 
-	waitForImportToSucceed(t, ts, client, env.provisioner, installation)
+	waitForImportToSucceed(t, ts, settings.awat, settings.provisioner, installation)
 
-	clusterInstallations, err := env.provisioner.GetClusterInstallations(
+	clusterInstallations, err := settings.provisioner.GetClusterInstallations(
 		&cloud.GetClusterInstallationsRequest{
 			Paging:         cloud.AllPagesNotDeleted(),
 			InstallationID: installation.ID,
@@ -177,7 +175,7 @@ func TestMattermostImport(t *testing.T) {
 
 	completed := &completedEnvironment{
 		t:           t,
-		provisioner: env.provisioner,
+		provisioner: settings.provisioner,
 		target:      ci,
 		archiveType: model.MattermostWorkspaceBackupType,
 	}
@@ -185,34 +183,41 @@ func TestMattermostImport(t *testing.T) {
 	checkChannels(completed)
 	checkUsers(completed)
 	checkPosts(completed)
-
 }
 
-func setupEnvironment(t *testing.T, importType model.BackupType) *environment {
+func setupEnvironment(t *testing.T, importType model.BackupType) *setting {
 	t.Log("validate the environment and gather variables")
 
-	env, err := validatedEnvironment()
+	settings, err := getSettings()
 	require.NoError(t, err)
 
 	switch importType {
 	case model.MattermostWorkspaceBackupType:
-		env.key = strings.TrimPrefix(mattermostArchive, "../")
+		settings.file = mattermostArchive
 	case model.SlackWorkspaceBackupType:
-		env.key = strings.TrimPrefix(slackArchive, "../")
+		settings.file = slackArchive
 	default:
 		t.FailNow()
 	}
-	err = uploadTestArtifact(env.bucket, env.key)
+
+	t.Log("Upload the archive for translation")
+	archiveName, err := settings.awat.UploadArchiveForTranslation(settings.file)
+	require.NoError(t, err)
+	uploadID := strings.TrimSuffix(archiveName, ".zip")
+	err = settings.awat.WaitForUploadToComplete(uploadID)
+	require.NoError(t, err)
+
+	settings.key = archiveName
+
 	t.Cleanup(func() {
-		err = deleteS3Object(env.bucket, env.key)
+		err = deleteS3Object(settings.bucket, settings.key)
 		require.NoError(t, err)
 	})
-	require.NoError(t, err)
 
 	t.Log("clean up the environment from any previously interrupted tests")
 
-	cleanOldInstallations(t, env.provisioner)
-	return env
+	cleanOldInstallations(t, settings.provisioner)
+	return settings
 }
 
 func cleanOldInstallations(t *testing.T, provisioner *cloud.Client) {
@@ -236,7 +241,7 @@ func cleanOldInstallations(t *testing.T, provisioner *cloud.Client) {
 	}
 }
 
-func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
+func getInstallation(t *testing.T, env *setting) *cloud.InstallationDTO {
 	t.Log("create an Installation into which to run an import")
 
 	installation, err := env.provisioner.CreateInstallation(
@@ -244,13 +249,9 @@ func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
 			OwnerID:   "awat-e2e",
 			DNS:       fmt.Sprintf("awat-e2e-%s%s", model.NewID(), env.testDomain),
 			Filestore: cloud.InstallationFilestoreBifrost,
-			Version:   "793e006",
-			// TODO: change this to EE
-			// and a stable version not a random commit on my branch.
-			// We're waiting for this PR to merge:
-			// https://github.com/mattermost/mattermost-server/pull/18084
-			Image:    "mattermost/mattermost-team-edition",
-			Affinity: cloud.InstallationAffinityMultiTenant,
+			Version:   "stable",
+			Image:     "mattermost/mattermost-enterprise-edition",
+			Affinity:  cloud.InstallationAffinityMultiTenant,
 		})
 
 	t.Cleanup(
@@ -263,7 +264,8 @@ func getInstallation(t *testing.T, env *environment) *cloud.InstallationDTO {
 				}
 				return true
 			})
-		})
+		},
+	)
 
 	require.NoError(t, err)
 	require.NotNil(t, installation)
@@ -296,10 +298,11 @@ func startTranslationAndWaitForItToSucceed(
 	t *testing.T,
 	client *model.Client,
 	installation *cloud.InstallationDTO,
-	env *environment,
-	archiveType model.BackupType) *model.TranslationStatus {
+	settings *setting,
+	archiveType model.BackupType,
+) *model.TranslationStatus {
 
-	translation := startTranslation(t, client, installation, env, archiveType)
+	translation := startTranslation(t, client, installation, settings, archiveType)
 	return waitForTranslationToSucceed(t, client, translation)
 }
 
@@ -307,7 +310,7 @@ func startTranslation(
 	t *testing.T,
 	client *model.Client,
 	installation *cloud.InstallationDTO,
-	env *environment,
+	settings *setting,
 	archiveType model.BackupType) *model.TranslationStatus {
 	t.Logf("start a new translation into installation %s", installation.ID)
 
@@ -318,11 +321,13 @@ func startTranslation(
 		teamName = ""
 	}
 
+	t.Log("create a new translation with key " + settings.key)
+
 	ts, err := client.CreateTranslation(
 		&model.TranslationRequest{
 			Type:           archiveType,
 			InstallationID: installation.ID,
-			Archive:        env.key,
+			Archive:        settings.key,
 			Team:           teamName,
 		})
 	require.NoError(t, err)
@@ -381,6 +386,35 @@ func waitForTranslationToSucceed(
 	return ts
 }
 
+func waitForImportStatusChange(t *testing.T, client *model.Client, importID string, stateFrom, statusTo string) {
+	t.Logf("wait for import to move from %s state to %s", stateFrom, statusTo)
+
+	retryFor(time.Minute*5, func() bool {
+		importStatus, err := client.GetImportStatus(importID)
+		require.NoError(t, err)
+		return importStatus.State != stateFrom
+	})
+
+	importStatus, err := client.GetImportStatus(importID)
+	require.NoError(t, err)
+	require.Equal(t, statusTo, importStatus.State)
+}
+
+func waitForInstallationStatus(t *testing.T, provisioner *cloud.Client, installationID string, state string) {
+	t.Logf("wait for installation to be in %s state", state)
+
+	retryFor(time.Minute*5, func() bool {
+		installation, err := provisioner.GetInstallation(
+			installationID,
+			&cloud.GetInstallationRequest{
+				IncludeGroupConfig:          false,
+				IncludeGroupConfigOverrides: false,
+			})
+		require.NoError(t, err)
+		return installation.State == state
+	})
+}
+
 func waitForImportToSucceed(
 	t *testing.T,
 	ts *model.TranslationStatus,
@@ -396,83 +430,60 @@ func waitForImportToSucceed(
 		require.Equal(t, model.ImportStateRequested, importStatus.State)
 	}
 
-	retryFor(time.Minute*10, func() bool {
-		importStatus, err = client.GetImportStatus(importStatus.ID)
-		if importStatus.State == model.ImportStateInProgress {
-			installation, err := provisioner.GetInstallation(
-				importStatus.InstallationID,
-				&cloud.GetInstallationRequest{
-					IncludeGroupConfig:          false,
-					IncludeGroupConfigOverrides: false,
-				})
-			if err != nil && err.Error() == "failed with status code 409" {
-				// the Installation is locked, probably by one of the
-				// operations that is being tested, ha!
-				return false
-			}
-			require.NoError(t, err)
-			if installation == nil {
-				t.Log("wtf? the installation should exist")
-				t.Fail()
-			}
-
-			require.Equal(t, cloud.InstallationStateImportInProgress, installation.State)
-			return true
-		}
-		return false
-	})
-
-	t.Logf("wait for import %s to complete", importStatus.ID)
+	// Step 1
+	// It should be in the requested state adn then move to the pre-adjustment state
+	waitForImportStatusChange(t, client, importStatus.ID, model.ImportStateRequested, model.ImportStateInstallationPreAdjustment)
+	// Installation should move to the stable state
+	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateStable)
 
 	installation, err = provisioner.GetInstallation(
-		importStatus.InstallationID,
+		installation.ID,
 		&cloud.GetInstallationRequest{
 			IncludeGroupConfig:          false,
 			IncludeGroupConfigOverrides: false,
 		})
 	require.NoError(t, err)
-	require.Equal(t, cloud.InstallationStateImportInProgress, installation.State)
+	require.Equal(t, model.Size1000String, installation.Size)
 
-	retryFor(time.Minute*10, func() bool {
-		importStatus, err = client.GetImportStatus(importStatus.ID)
-		if importStatus.State != model.ImportStateInProgress {
-			require.NotZero(t, importStatus.CompleteAt)
-			require.NotZero(t, importStatus.CreateAt)
-			require.NotZero(t, importStatus.StartAt)
-			require.Equal(t, model.ImportStateComplete, importStatus.State)
-			if model.ImportStateComplete != importStatus.State {
-				t.FailNow()
-			}
-			return true
-		}
-		return false
-	})
-	require.Equal(t, model.ImportStateComplete, importStatus.State)
+	// Step 2
+	// It should be in the pre-adjustment state and then move to the in-progress state
+	waitForImportStatusChange(t, client, importStatus.ID, model.ImportStateInstallationPreAdjustment, model.ImportStateInProgress)
+	// Installation should move to the import-in-progress state
+	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateImportInProgress)
+	// Installation should move to the import-complete state
+	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateImportComplete)
+
+	// Step 3
+	// It should be in the in-progress state and then move to the complete state
+	waitForImportStatusChange(t, client, importStatus.ID, model.ImportStateInProgress, model.ImportStateComplete)
+	// Installation should move to the stable state
+	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateStable)
+
+	importStatus, err = client.GetImportStatus(importStatus.ID)
+	require.NoError(t, err)
+	require.NotZero(t, importStatus.CompleteAt)
+	require.NotZero(t, importStatus.CreateAt)
+	require.NotZero(t, importStatus.StartAt)
 	require.Empty(t, importStatus.Error)
 
+	// Step 4
+	// It should be in the complete state and then move to the post-adjustment state
+	waitForImportStatusChange(t, client, importStatus.ID, model.ImportStateComplete, model.ImportStateInstallationPostAdjustment)
+	// Installation should move to the stable state
+	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateStable)
+
 	installation, err = provisioner.GetInstallation(
-		importStatus.InstallationID,
+		installation.ID,
 		&cloud.GetInstallationRequest{
 			IncludeGroupConfig:          false,
 			IncludeGroupConfigOverrides: false,
 		})
 	require.NoError(t, err)
-	require.Equal(t, cloud.InstallationStateImportComplete, installation.State)
+	require.Equal(t, model.SizeCloud10Users, installation.Size)
 
-	retryFor(time.Minute*3, func() bool {
-		installation, _ = provisioner.GetInstallation(
-			importStatus.InstallationID,
-			&cloud.GetInstallationRequest{
-				IncludeGroupConfig:          false,
-				IncludeGroupConfigOverrides: false,
-			})
-		if installation.State == cloud.InstallationStateStable {
-			return true
-		}
-		return false
-	})
-
-	require.Equal(t, cloud.InstallationStateStable, installation.State)
+	// Step 5
+	// It should be in the post-adjustment state and then move to the complete state
+	waitForImportStatusChange(t, client, importStatus.ID, model.ImportStateInstallationPostAdjustment, model.ImportStateSucceeded)
 }
 
 type post struct {
@@ -523,8 +534,16 @@ func checkTeams(env *completedEnvironment) {
 		})
 	require.NoError(env.t, err)
 
-	teamSearch := []*team{}
-	_ = json.Unmarshal(output, &teamSearch)
+	lines := strings.Split(string(output), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	lines = lines[:len(lines)-1]
+	output = []byte(strings.Join(lines, "\n"))
+
+	var teamSearch []*team
+	err = json.Unmarshal(output, &teamSearch)
+	require.NoError(env.t, err)
 
 	require.NotEmpty(env.t, teamSearch)
 
@@ -554,15 +573,22 @@ func checkChannels(env *completedEnvironment) {
 		env.t.FailNow()
 	}
 
-	channelSearch := []*channel{}
 	output, err := env.provisioner.ExecClusterInstallationCLI(env.target.ID, "mmctl",
 		[]string{
 			"--format", "json",
 			"--local",
 			"channel", "list", wantedTeam,
 		})
-
 	require.NoError(env.t, err)
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	lines = lines[:len(lines)-1]
+	output = []byte(strings.Join(lines, "\n"))
+
+	var channelSearch []*channel
 	err = json.Unmarshal(output, &channelSearch)
 	require.NoError(env.t, err)
 
@@ -603,10 +629,19 @@ func checkPosts(env *completedEnvironment) {
 			"--format", "json",
 			"post", "list", fmt.Sprintf("%s:%s", teamName, channelName),
 		})
-
-	postListResult, err := extractPosts(output)
 	require.NoError(env.t, err)
-	assert.NotEmpty(env.t, postListResult)
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	lines = lines[:len(lines)-1]
+	output = []byte(strings.Join(lines, "\n"))
+
+	var postListResult []post
+	err = json.Unmarshal(output, &postListResult)
+	require.NoError(env.t, err)
+	require.NotEmpty(env.t, postListResult)
 
 	switch env.archiveType {
 	case model.MattermostWorkspaceBackupType:
@@ -638,11 +673,20 @@ func checkUsers(env *completedEnvironment) {
 			"--local",
 			"user", "list",
 		})
+	require.NoError(env.t, err)
 
-	userSearchResult := []*user{}
+	lines := strings.Split(string(output), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	lines = lines[:len(lines)-1]
+	output = []byte(strings.Join(lines, "\n"))
+
+	var userSearchResult []*user
 	err = json.Unmarshal(output, &userSearchResult)
 	require.NoError(env.t, err)
 	require.NotEmpty(env.t, userSearchResult)
+
 	for _, u := range userSearchResult {
 		if u.IsBot {
 			continue
@@ -667,38 +711,16 @@ func retryFor(d time.Duration, doer func() bool) {
 	}
 }
 
-func extractPosts(input []byte) ([]post, error) {
-	input = []byte(strings.TrimSpace(string(input)))
-	posts := []post{}
-	for len(input) > 0 {
-		originalLength := len(input)
-		for i := 1; i <= len(input); i++ { // this is really brute force but it'll do
-			var post post
-			err := json.Unmarshal(input[:i], &post)
-			if err == nil {
-				posts = append(posts, post)
-				input = input[i:]
-				break
-			}
-		}
-		if len(input) == originalLength {
-			return nil, errors.Errorf("couldn't parse full input, %d characters left, %d originally", len(input), originalLength)
-		}
-	}
-	return posts, nil
-}
-
 func deleteS3Object(bucket, key string) error {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+
+	awsSession, err := session.NewSession()
 	if err != nil {
 		return err
 	}
 
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancelFunc()
+	s3client := s3.New(awsSession)
 
-	client := s3.NewFromConfig(cfg)
-	_, err = client.DeleteObject(ctx, &s3.DeleteObjectInput{
+	_, err = s3client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
@@ -706,14 +728,14 @@ func deleteS3Object(bucket, key string) error {
 	return err
 }
 
-func validatedEnvironment() (*environment, error) {
+func getSettings() (*setting, error) {
 	s3URL := os.Getenv("AWAT_E2E_BUCKET")
 	if s3URL == "" {
 		return nil, errors.New("provided bucket name must not be empty; set AWAT_E2E_BUCKET")
 	}
 
-	awat := os.Getenv("AWAT_E2E_URL")
-	if awat == "" {
+	awatURL := os.Getenv("AWAT_E2E_URL")
+	if awatURL == "" {
 		return nil, errors.New("provided AWAT URL must not be empty; set AWAT_E2E_URL")
 	}
 
@@ -728,36 +750,10 @@ func validatedEnvironment() (*environment, error) {
 		return nil, errors.New("provided Provisioner URL must not be empty; set AWAT_E2E_PROVISIONER_URL")
 	}
 
-	return &environment{
-		awatURL:     awat,
+	return &setting{
 		bucket:      s3URL,
-		provisioner: cloud.NewClient(provisionerURL),
 		testDomain:  domain,
+		provisioner: cloud.NewClient(provisionerURL),
+		awat:        model.NewClient(awatURL),
 	}, nil
-}
-
-func uploadTestArtifact(bucketName, keyName string) error {
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return err
-	}
-
-	client := s3.NewFromConfig(cfg)
-	archive, err := os.Open("../" + keyName)
-	defer archive.Close()
-	if err != nil {
-		return err
-	}
-
-	params := &s3.PutObjectInput{
-		Bucket: &bucketName,
-		Key:    &keyName,
-		Body:   archive,
-	}
-
-	ctx, cancelFunc := context.WithTimeout(context.Background(), time.Minute)
-	defer cancelFunc()
-
-	_, err = client.PutObject(ctx, params)
-	return err
 }

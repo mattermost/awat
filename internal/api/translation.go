@@ -38,6 +38,7 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		c.Logger.WithError(err).Errorf("failed to unmarshal JSON from request")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	translation := model.NewTranslationFromRequest(translationRequest)

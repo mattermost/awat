@@ -35,7 +35,7 @@ func (request *TranslationRequest) Validate() error {
 		return errors.New("must specify backup type")
 	}
 	if request.Type == SlackWorkspaceBackupType && len(request.Team) == 0 {
-		return errors.New("must specify team with slack buckup type")
+		return errors.New("must specify team with slack backup type")
 	}
 	if !strings.HasSuffix(request.Archive, ".zip") {
 		return errors.New("archive must be a valid zip file")

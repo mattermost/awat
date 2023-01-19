@@ -157,6 +157,8 @@ var startTranslationCmd = &cobra.Command{
 			if err := awat.WaitForUploadToComplete(uploadID); err != nil {
 				return errors.Wrapf(err, "failed to upload %s", uploadID)
 			}
+
+			archive = archiveName
 		}
 
 		var status *model.TranslationStatus
