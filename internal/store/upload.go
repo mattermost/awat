@@ -47,7 +47,7 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 
 // CreateUpload creates an upload object in the database to represent a
 // started upload
-func (sqlStore *SQLStore) CreateUpload(id string) error {
+func (sqlStore *SQLStore) CreateUpload(id string, archiveType model.BackupType) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(UploadTableName).
 		SetMap(map[string]interface{}{
@@ -55,6 +55,7 @@ func (sqlStore *SQLStore) CreateUpload(id string) error {
 			"CompleteAt": 0,
 			"ID":         id,
 			"Error":      "",
+			"Type":       archiveType,
 		}),
 	)
 
@@ -71,6 +72,18 @@ func (sqlStore *SQLStore) CompleteUpload(uploadID, errorMessage string) error {
 			"CompleteAt": model.GetMillis(),
 			"ID":         uploadID,
 			"Error":      errorMessage,
+		}),
+	)
+	return err
+}
+
+// ValidateUpload marks an upload as validated in the database
+func (sqlStore *SQLStore) ValidateUpload(uploadID string) error {
+	_, err := sqlStore.execBuilder(sqlStore.db, sq.
+		Update(UploadTableName).
+		Where("ID = ?", uploadID).
+		SetMap(map[string]interface{}{
+			"validated": true,
 		}),
 	)
 	return err

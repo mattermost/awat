@@ -58,7 +58,7 @@ var migrations = []migration{
 						Error          TEXT
 				);
 
-				ALTER TABLE Import 
+				ALTER TABLE Import
 						ADD CONSTRAINT fk_TranslationID
 						FOREIGN KEY (TranslationID) REFERENCES Translation(ID)
 				;
@@ -92,6 +92,26 @@ var migrations = []migration{
 			}
 
 			_, err = e.Exec(`UPDATE import SET createat = createat / 1000, startat = startat / 1000, completeat = completeat / 1000;`)
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	},
+	// Add Import.Type column so we know the archive type being uploaded
+	// Add Translation.UploadID column to link the uploaded file with a translation
+	{semver.MustParse("0.3.0"), semver.MustParse("0.3.1"),
+		func(e execer) error {
+			_, err := e.Exec(`ALTER TABLE Upload ADD COLUMN type TEXT NULL DEFAULT null`)
+			if err != nil {
+				return err
+			}
+
+			_, err = e.Exec(`ALTER TABLE Translation
+			ADD COLUMN UploadID TEXT NULL DEFAULT null
+			CONSTRAINT fk_UploadID REFERENCES Upload (id)
+			ON UPDATE CASCADE ON DELETE CASCADE;`)
 			if err != nil {
 				return err
 			}

@@ -128,6 +128,7 @@ func (sqlStore *SQLStore) CreateTranslation(translation *model.Translation) erro
 			"Team":           translation.Team,
 			"Users":          translation.Users,
 			"Type":           translation.Type,
+			"UploadID":       translation.UploadID,
 		}),
 	)
 	return err

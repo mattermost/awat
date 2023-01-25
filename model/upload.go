@@ -9,4 +9,5 @@ type Upload struct {
 	CompleteAt int64
 	CreateAt   int64
 	Error      string
+	Type       BackupType
 }

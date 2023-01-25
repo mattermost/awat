@@ -7,6 +7,7 @@ package model
 import (
 	"encoding/json"
 	"io"
+	"net/url"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -24,6 +25,7 @@ type TranslationRequest struct {
 	InstallationID string
 	Archive        string
 	Team           string
+	UploadID       *string
 }
 
 // Validate validates the values of a translation create request.
@@ -90,4 +92,24 @@ func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus,
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
 	return status, nil
+}
+
+type ArchiveUploadRequest struct {
+	Type BackupType
+}
+
+func (r ArchiveUploadRequest) Validate() error {
+	if r.Type != SlackWorkspaceBackupType && r.Type != MattermostWorkspaceBackupType {
+		return errors.New("invalid backup type")
+	}
+
+	return nil
+}
+
+func NewArchiveUploadFromURLQuery(values url.Values) (*ArchiveUploadRequest, error) {
+	var request ArchiveUploadRequest
+
+	request.Type = BackupType(values.Get("type"))
+
+	return &request, nil
 }
