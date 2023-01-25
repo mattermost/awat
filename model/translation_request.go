@@ -85,6 +85,15 @@ func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error
 	return &status, nil
 }
 
+func NewTranslationStatusFromBytes(data []byte) (*TranslationStatus, error) {
+	var status TranslationStatus
+	err := json.Unmarshal(data, &status)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode translation start request")
+	}
+	return &status, nil
+}
+
 func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus, error) {
 	var status []*TranslationStatus
 	err := json.NewDecoder(reader).Decode(&status)

@@ -49,7 +49,7 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return NewTranslationStatusFromReader(resp.Body)
+		return NewTranslationStatusFromBytes(bodyBytes)
 
 	default:
 		return nil, errors.Errorf("failed with status code %d: %s", resp.StatusCode, string(bodyBytes))
@@ -342,15 +342,11 @@ func (c *Client) UploadArchiveForTranslation(filename string, archiveType Backup
 		return "", errors.Wrap(err, "failed to send HTTP request to AWAT")
 	}
 
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.New("failed to read response body")
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		return "", errors.Errorf("received unexpected code %d from AWAT: %s", resp.StatusCode, string(bodyBytes))
