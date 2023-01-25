@@ -40,13 +40,19 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 	if err != nil {
 		return nil, err
 	}
-	defer closeBody(resp)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("failed to read response body")
+	}
+	defer resp.Body.Close()
+
 	switch resp.StatusCode {
 	case http.StatusAccepted:
 		return NewTranslationStatusFromReader(resp.Body)
 
 	default:
-		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 }
 
@@ -308,13 +314,13 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 }
 
 // UploadArchiveForTranslation uploads the file specified as an argument to S3 via the AWAT
-func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
+func (c *Client) UploadArchiveForTranslation(filename string, archiveType BackupType) (string, error) {
 	inputFile, err := os.Open(filename)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to read input file %s", filename)
 	}
 
-	req, err := http.NewRequest("POST", c.buildURL("/upload"), inputFile)
+	req, err := http.NewRequest("POST", c.buildURL("/upload?type=%s", archiveType), inputFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create HTTP request")
 	}
@@ -341,20 +347,20 @@ func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
 		_ = resp.Body.Close()
 	}()
 
-	if resp.StatusCode != http.StatusAccepted {
-		return "", errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
-	}
-
-	archiveNameBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.New("failed to read response body")
 	}
 
-	if archiveNameBytes == nil {
+	if resp.StatusCode != http.StatusAccepted {
+		return "", errors.Errorf("received unexpected code %d from AWAT: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	if bodyBytes == nil {
 		return "", errors.New("invalid response data")
 	}
 
-	return string(archiveNameBytes), nil
+	return string(bodyBytes), nil
 }
 
 func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
