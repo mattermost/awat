@@ -36,8 +36,8 @@ func (a *MockAWS) UploadArchiveToS3(uploadFileName, destKeyName string) error {
 	return nil
 }
 
-func (a *MockAWS) DownloadArchiveFromS3(archiveName string) (string, error) {
-	return "", nil
+func (a *MockAWS) DownloadArchiveFromS3(archiveName string) (string, func(), error) {
+	return "", func() {}, nil
 }
 
 func TestTranslationClient(t *testing.T) {

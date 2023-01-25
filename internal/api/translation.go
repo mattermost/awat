@@ -59,13 +59,14 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
 		validator := validators.NewMattermostValidator()
 
-		archivePath, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
+		archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
 		if err != nil {
 			c.Logger.WithError(err).Error("error downloading archive for validation")
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(err.Error()))
 			return
 		}
+		defer cleanup()
 		c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "path": archivePath}).Debug("Downloaded archive for validation")
 
 		if err := validator.Validate(archivePath); err != nil {
