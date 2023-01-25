@@ -76,15 +76,3 @@ func (sqlStore *SQLStore) CompleteUpload(uploadID, errorMessage string) error {
 	)
 	return err
 }
-
-// ValidateUpload marks an upload as validated in the database
-func (sqlStore *SQLStore) ValidateUpload(uploadID string) error {
-	_, err := sqlStore.execBuilder(sqlStore.db, sq.
-		Update(UploadTableName).
-		Where("ID = ?", uploadID).
-		SetMap(map[string]interface{}{
-			"validated": true,
-		}),
-	)
-	return err
-}
