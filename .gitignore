@@ -3,3 +3,4 @@ build/_output/
 .idea
 vendor/
 /tmp
+**/.DS_Store

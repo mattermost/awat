@@ -99,9 +99,19 @@ var migrations = []migration{
 			return nil
 		},
 	},
+	{semver.MustParse("0.3.0"), semver.MustParse("0.4.0"),
+		func(e execer) error {
+			_, err := e.Exec(`
+				ALTER TABLE Import
+				    ADD COLUMN State TEXT,
+				    ADD COLUMN ImportBy TEXT;
+		`)
+			return err
+		},
+	},
 	// Add Import.Type column so we know the archive type being uploaded
 	// Add Translation.UploadID column to link the uploaded file with a translation
-	{semver.MustParse("0.3.0"), semver.MustParse("0.3.1"),
+	{semver.MustParse("0.4.0"), semver.MustParse("0.5.0"),
 		func(e execer) error {
 			_, err := e.Exec(`ALTER TABLE Upload ADD COLUMN type TEXT NULL DEFAULT null`)
 			if err != nil {

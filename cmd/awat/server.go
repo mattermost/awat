@@ -120,7 +120,7 @@ var serverCmd = &cobra.Command{
 		translationSupervisor.Start()
 
 		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloud, bucket, keepImportData)
-		importSupervisor.Start()
+		go importSupervisor.Start()
 
 		router := mux.NewRouter()
 		api.Register(router,

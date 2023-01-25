@@ -46,7 +46,7 @@ e2e-parallel:
 
 e2e-warn:
 	@echo Warning!
-	@echo These tests won\'t work without the following environment variables:
+	@echo "These tests won\'t work without the following environment variables:"
 	@echo AWAT_E2E_INSTALLATION_DOMAIN set to the domain to use for testing installations, e.g. \".dev.cloud.mattermost.com\"
 	@echo AWAT_E2E_URL set to the AWAT endpoint
 	@echo AWAT_E2E_PROVISIONER_URL set to the Provisioner endpoint

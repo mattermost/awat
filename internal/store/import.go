@@ -23,8 +23,10 @@ func init() {
 			"CreateAt",
 			"ID",
 			"LockedBy",
+			"ImportBy",
 			"StartAt",
 			"TranslationID",
+			"State",
 			"Resource",
 			"Error",
 		).
@@ -68,12 +70,13 @@ func (sqlStore *SQLStore) GetAllImports() ([]*model.Import, error) {
 // Returns nil with no error if no Import is available to lock
 // Returns nil, error if the Import cannot be claimed for some other reason
 func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*model.Import, error) {
-	imports := []*model.Import{}
+	var imports []*model.Import
 	err := sqlStore.selectBuilder(sqlStore.db, &imports,
 		importSelect.
 			Where("StartAt = 0").
 			Where("CompleteAt = 0").
-			Where("LockedBy = ''").
+			Where("ImportBy = ''").
+			Where("State = ?", model.ImportStateInProgress).
 			OrderBy("CreateAt ASC").
 			Limit(1),
 	)
@@ -83,20 +86,20 @@ func (sqlStore *SQLStore) GetAndClaimNextReadyImport(provisionerID string) (*mod
 	if len(imports) < 1 {
 		return nil, nil
 	}
-	imprt := imports[0]
+	imp := imports[0]
 
-	err = sqlStore.TryLockImport(imprt, provisionerID)
+	err = sqlStore.tryLockImportByProvisioner(imp, provisionerID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to lock Import %s", imprt.ID)
+		return nil, errors.Wrapf(err, "failed to lock Import %s", imp.ID)
 	}
 
-	imprt.StartAt = model.GetMillis()
-	err = sqlStore.UpdateImport(imprt)
+	imp.StartAt = model.GetMillis()
+	err = sqlStore.UpdateImport(imp)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to mark Import %s as started", imprt.ID)
+		return nil, errors.Wrapf(err, "failed to mark Import %s as started", imp.ID)
 	}
 
-	return imprt, nil
+	return imp, nil
 }
 
 // CreateImport stores a new import.
@@ -112,7 +115,9 @@ func (sqlStore *SQLStore) CreateImport(imp *model.Import) error {
 			"StartAt":       imp.StartAt,
 			"CompleteAt":    imp.CompleteAt,
 			"LockedBy":      imp.LockedBy,
+			"ImportBy":      imp.ImportBy,
 			"TranslationID": imp.TranslationID,
+			"State":         imp.State,
 			"Resource":      imp.Resource,
 			"Error":         imp.Error,
 		}),
@@ -129,8 +134,10 @@ func (sqlStore *SQLStore) UpdateImport(imp *model.Import) error {
 			"CompleteAt":    imp.CompleteAt,
 			"ID":            imp.ID,
 			"LockedBy":      imp.LockedBy,
+			"ImportBy":      imp.ImportBy,
 			"StartAt":       imp.StartAt,
 			"TranslationID": imp.TranslationID,
+			"State":         imp.State,
 			"Resource":      imp.Resource,
 			"Error":         imp.Error,
 		}).
@@ -190,6 +197,22 @@ func (sqlStore *SQLStore) GetImportsInProgress() ([]*model.Import, error) {
 
 }
 
+func (sqlStore *SQLStore) GetUnlockedImportPendingWork() ([]*model.Import, error) {
+	var imports []*model.Import
+	err := sqlStore.selectBuilder(sqlStore.db, &imports,
+		importSelect.
+			Where(sq.Eq{
+				"State": model.AllImportStatesPendingWork,
+			}).
+			Where("LockedBy = ?", "").
+			OrderBy("CreateAt ASC"),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return imports, nil
+}
+
 // TryLockImport attempts to lock the input Import with the given
 // owner, but will not do so if the column already contains something,
 // and will return an error instead in that case
@@ -219,10 +242,41 @@ func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
 
 // UnlockImport clears the lock for the given Import
 func (sqlStore *SQLStore) UnlockImport(imp *model.Import) error {
-	imp.LockedBy = ""
-	err := sqlStore.UpdateImport(imp)
+	_, err := sqlStore.execBuilder(
+		sqlStore.db, sq.
+			Update(ImportTableName).
+			SetMap(map[string]interface{}{"LockedBy": ""}).
+			Where("ID = ?", imp.ID),
+	)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unlock Import %s", imp.ID)
+	}
+	return nil
+}
+
+// tryLockImportByProvisioner attempts to lock the input Import with the given
+// owner, but will not do so if the column already contains something,
+// and will return an error instead in that case
+func (sqlStore *SQLStore) tryLockImportByProvisioner(imp *model.Import, owner string) error {
+	sqlStore.logger.Infof("Locking Import %s by %s", imp.ID, owner)
+	imp.ImportBy = owner
+
+	result, err := sqlStore.execBuilder(
+		sqlStore.db, sq.
+			Update(ImportTableName).
+			SetMap(map[string]interface{}{"ImportBy": owner}).
+			Where("ID = ?", imp.ID).
+			Where("ImportBy = ?", ""),
+	)
+	if err != nil {
+		return errors.Wrapf(err, "failed to lock Import %s by provisioner", imp.ID)
+	}
+	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
+		if err != nil {
+			return errors.Wrapf(err, "wrong number of rows while trying to lock %s", imp.ID)
+		} else {
+			return errors.Errorf("wrong number of rows while trying to lock %s", imp.ID)
+		}
 	}
 	return nil
 }

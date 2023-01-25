@@ -6,6 +6,7 @@ package api
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gorilla/mux"
 	"github.com/mattermost/awat/model"
@@ -57,7 +58,7 @@ func handleReleaseLockOnImport(c *Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	imprt.LockedBy = ""
+	imprt.ImportBy = ""
 
 	err = c.Store.UpdateImport(imprt)
 	if err != nil {
@@ -129,6 +130,10 @@ func handleGetImportStatusesByInstallation(c *Context, w http.ResponseWriter, r 
 		return
 	}
 
+	sort.SliceStable(imports, func(i, j int) bool {
+		return imports[i].CompleteAt > imports[j].CompleteAt
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	statuses, err := importStatusListFromImports(imports, c.Store)
@@ -161,7 +166,7 @@ func handleCompleteImport(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	imp.CompleteAt = completed.CompleteAt
-	imp.LockedBy = ""
+	imp.ImportBy = ""
 	imp.Error = completed.Error
 
 	err = c.Store.UpdateImport(imp)
@@ -184,7 +189,7 @@ func importStatusFromImport(imp *model.Import, store Store) (*model.ImportStatus
 		InstallationID: translation.InstallationID,
 		Users:          translation.Users,
 		Team:           translation.Team,
-		State:          imp.State(),
+		State:          imp.State,
 		Type:           translation.Type,
 	}, nil
 }
