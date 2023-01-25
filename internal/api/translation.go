@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/mattermost/awat/internal/validators"
 	"github.com/mattermost/awat/model"
 	"github.com/sirupsen/logrus"
 )
@@ -51,6 +52,27 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		c.Logger.Warnf("resource %s does not exist in bucket %s", translation.Resource, c.AWS.GetBucketName())
 		w.WriteHeader(http.StatusNotFound)
 		return
+	}
+
+	if translationRequest.Type == model.MattermostWorkspaceBackupType && translationRequest.UploadID != nil {
+		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
+		validator := validators.NewMattermostValidator()
+
+		archivePath, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
+		if err != nil {
+			c.Logger.WithError(err).Error("error downloading archive for validation")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+		c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "path": archivePath}).Debug("Downloaded archive for validation")
+
+		if err := validator.Validate(archivePath); err != nil {
+			c.Logger.WithError(err).Error("archive validation failed")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
 	}
 
 	err = c.Store.CreateTranslation(translation)
