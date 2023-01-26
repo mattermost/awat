@@ -16,7 +16,15 @@ import (
 // Translator defines the interface that must be satisfied to allow
 // for converting foreign workspace archives to the Mattermost format
 type Translator interface {
+
+	// Translate performs the converstion from the input type to a mattermost supported import
 	Translate(translation *model.Translation) (outputFilename string, err error)
+
+	// GetOutputArchiveLocalPath returns the local accesible path to the archive file
+	GetOutputArchiveLocalPath() (string, error)
+
+	// Cleanup cleans up resources, like local files
+	Cleanup() error
 }
 
 // TranslatorOptions holds the extra data needed to instantiate a

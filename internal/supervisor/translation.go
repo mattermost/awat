@@ -12,6 +12,7 @@ import (
 
 	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/translator"
+	"github.com/mattermost/awat/internal/validators"
 	"github.com/mattermost/awat/model"
 )
 
@@ -99,6 +100,33 @@ func (s *TranslationSupervisor) supervise() {
 	if err != nil {
 		logger.WithError(err).Error("Failed to mark translation as completed")
 		return
+	}
+	defer func() {
+		if err := trans.Cleanup(); err != nil {
+			logger.WithError(err).Error("error cleaning up translation")
+		}
+	}()
+
+	logger.Info("Valiating translation result")
+	// Validate the translation before considering it "importable"
+	validator, err := validators.NewValidator(model.MattermostWorkspaceBackupType)
+	if err != nil {
+		logger.WithError(err).Error("error getting validator")
+		return
+	}
+
+	localArchivePath, err := trans.GetOutputArchiveLocalPath()
+	if err != nil {
+		logger.WithError(err).Error("error getting local archive path for validation")
+		return
+	}
+	if localArchivePath != "" {
+		if err := validator.Validate(localArchivePath); err != nil {
+			logger.WithError(err).Error("validation error on translation output")
+			return
+		}
+	} else {
+		logger.Warn("skipping validation due to missing local archive path")
 	}
 
 	importResource := fmt.Sprintf("%s/%s", s.bucket, output)

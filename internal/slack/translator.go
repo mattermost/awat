@@ -22,8 +22,9 @@ import (
 )
 
 type SlackTranslator struct {
-	bucket     string
-	workingDir string
+	bucket             string
+	workingDir         string
+	outputZipLocalPath string
 }
 
 func NewSlackTranslator(bucket, workingDir string) *SlackTranslator {
@@ -76,23 +77,34 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	}
 
 	logger.Infof("Preparing Mattermost archive for Translation %s for upload", translation.ID)
-	outputZip, err := st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
+	st.outputZipLocalPath, err = st.createOutputZipfile(logger, attachmentDirName, mbifName, translation.ID)
 	if err != nil {
 		return "", err
 	}
-	defer os.Remove(outputZip)
 
 	logger.Infof("Uploading Mattermost archive for Translation %s", translation.ID)
-	err = st.uploadTransformedZip(outputZip, st.bucket)
+	err = st.uploadTransformedZip(st.outputZipLocalPath, st.bucket)
 	if err != nil {
 		return "", err
 	}
 
-	outputNameSplitPath := strings.Split(outputZip, "/")
+	outputNameSplitPath := strings.Split(st.outputZipLocalPath, "/")
 	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
 	logger.Infof("Finished translation %s", translation.ID)
 
 	return outputShortName, nil
+}
+
+func (st *SlackTranslator) GetOutputArchiveLocalPath() (string, error) {
+	return st.outputZipLocalPath, nil
+}
+
+func (st *SlackTranslator) Cleanup() error {
+	if st.outputZipLocalPath == "" {
+		return nil
+	}
+
+	return os.Remove(st.outputZipLocalPath)
 }
 
 // fetchSlackArchive is responsible for downloading the input archive
@@ -230,6 +242,7 @@ func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
 	if err != nil {
 		return nil
 	}
+	defer body.Close()
 
 	outputNameSplitPath := strings.Split(output, "/")
 	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
