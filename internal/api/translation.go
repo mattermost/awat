@@ -74,7 +74,7 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		defer cleanup()
-		c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "path": archivePath}).Debug("Downloaded archive for validation")
+		c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "archivePath": archivePath}).Debug("Downloaded archive for validation")
 
 		if err := validator.Validate(archivePath); err != nil {
 			c.Logger.WithError(err).Error("archive validation failed")

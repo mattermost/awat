@@ -35,6 +35,7 @@ type AWS interface {
 	UploadArchiveToS3(uploadFileName, destKeyName string) error
 	DownloadArchiveFromS3(filename string) (string, func(), error)
 }
+
 type AWSContext struct {
 	Session *session.Session
 	Bucket  string

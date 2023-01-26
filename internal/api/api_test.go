@@ -18,36 +18,17 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mock_api "github.com/mattermost/awat/internal/mocks/api"
+	mock_context "github.com/mattermost/awat/internal/mocks/context"
 	"github.com/mattermost/awat/internal/testlib"
 	"github.com/mattermost/awat/model"
 )
-
-type MockAWS struct {
-	resourceExists bool
-}
-
-func (a *MockAWS) GetBucketName() string {
-	return "test"
-}
-
-func (a *MockAWS) CheckBucketFileExists(file string) (bool, error) {
-	return a.resourceExists, nil
-}
-
-func (a *MockAWS) UploadArchiveToS3(uploadFileName, destKeyName string) error {
-	return nil
-}
-
-func (a *MockAWS) DownloadArchiveFromS3(archiveName string) (string, func(), error) {
-	return "", func() {}, nil
-}
 
 func TestTranslations(t *testing.T) {
 	logger := testlib.MakeLogger(t)
 	mockController := gomock.NewController(t)
 	store := mock_api.NewMockStore(mockController)
 	router := mux.NewRouter()
-	mockAWS := &MockAWS{resourceExists: true}
+	mockAWS := &mock_context.MockAWS{ResourceExists: true}
 	Register(router, &Context{
 		Store:  store,
 		Logger: logger,
@@ -115,17 +96,23 @@ func TestTranslations(t *testing.T) {
 	})
 
 	t.Run("start a new translation", func(t *testing.T) {
-		store.EXPECT().
-			CreateTranslation(
-				// a more specific expectation could be applied here, but it
-				// doesn't seem worth the time to define a Matcher and get it
-				// all working just to ignore the nondeterministic ID that's
-				// passed to this function because the ID is generated at
-				// runtime
+		gomock.InOrder(
+			store.EXPECT().CreateUpload(
 				gomock.Any(),
-			).
-			Return(nil).
-			Times(1)
+				model.SlackWorkspaceBackupType,
+			).Return(nil).Times(1),
+			store.EXPECT().
+				CreateTranslation(
+					// a more specific expectation could be applied here, but it
+					// doesn't seem worth the time to define a Matcher and get it
+					// all working just to ignore the nondeterministic ID that's
+					// passed to this function because the ID is generated at
+					// runtime
+					gomock.Any(),
+				).
+				Return(nil).
+				Times(1),
+		)
 
 		resp, err := http.Post(fmt.Sprintf("%s/translate", ts.URL), "application/json",
 			strings.NewReader(
@@ -142,7 +129,7 @@ func TestTranslations(t *testing.T) {
 	})
 
 	t.Run("start a new translation, bad resource name", func(t *testing.T) {
-		mockAWS.resourceExists = false
+		mockAWS.ResourceExists = false
 
 		resp, err := http.Post(fmt.Sprintf("%s/translate", ts.URL), "application/json",
 			strings.NewReader(
