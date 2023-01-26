@@ -118,10 +118,7 @@ var migrations = []migration{
 				return err
 			}
 
-			_, err = e.Exec(`ALTER TABLE Translation
-			ADD COLUMN UploadID TEXT NULL DEFAULT null
-			CONSTRAINT fk_UploadID REFERENCES Upload (id)
-			ON UPDATE CASCADE ON DELETE CASCADE;`)
+			_, err = e.Exec(`ALTER TABLE Translation ADD COLUMN UploadID TEXT REFERENCES Upload (id)`)
 			if err != nil {
 				return err
 			}
