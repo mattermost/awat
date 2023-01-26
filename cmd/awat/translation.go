@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/awat/model"
@@ -154,7 +153,7 @@ var startTranslationCmd = &cobra.Command{
 				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
 
-			uploadID = ptr.String(strings.TrimSuffix(archive, ".zip"))
+			uploadID = ptr.String(model.TrimExtensionFromArchiveFilename(archive))
 
 			if err = awat.WaitForUploadToComplete(*uploadID); err != nil {
 				return errors.Wrapf(err, "failed to upload %s", archive)

@@ -203,7 +203,7 @@ func setupEnvironment(t *testing.T, importType model.BackupType) *setting {
 	t.Log("Upload the archive for translation")
 	archiveName, err := settings.awat.UploadArchiveForTranslation(settings.file, importType)
 	require.NoError(t, err)
-	uploadID := strings.TrimSuffix(archiveName, ".zip")
+	uploadID := model.TrimExtensionFromArchiveFilename(archiveName)
 	err = settings.awat.WaitForUploadToComplete(uploadID)
 	require.NoError(t, err)
 

@@ -55,9 +55,16 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if translationRequest.Type == model.MattermostWorkspaceBackupType && translationRequest.UploadID == nil {
+	// If we're providing an archive from a bucket (and not uploading it directly) we need to download
+	// and validate it locally before trying to import it to avoid import errors later.
+	if translationRequest.UploadID == nil {
 		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
-		validator := validators.NewMattermostValidator()
+		validator, err := validators.NewValidator(translationRequest.Type)
+		if err != nil {
+			c.Logger.WithError(err).Error("error getting validator")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 
 		archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
 		if err != nil {
@@ -73,6 +80,14 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 			c.Logger.WithError(err).Error("archive validation failed")
 			w.WriteHeader(http.StatusBadRequest)
 			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+
+		// Since we are checking a potentially manually or externally uploaded archive, store the result inside the
+		// uploads table so we can reference it later
+		if err := c.Store.CreateUpload(model.TrimExtensionFromArchiveFilename(translationRequest.Archive), translationRequest.Type); err != nil {
+			c.Logger.WithError(err).Error("error storing upload in database")
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 	}

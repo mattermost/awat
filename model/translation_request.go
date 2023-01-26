@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/url"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -39,7 +38,7 @@ func (request *TranslationRequest) Validate() error {
 	if request.Type == SlackWorkspaceBackupType && len(request.Team) == 0 {
 		return errors.New("must specify team with slack backup type")
 	}
-	if !strings.HasSuffix(request.Archive, ".zip") {
+	if !IsValidArchiveName(request.Archive) {
 		return errors.New("archive must be a valid zip file")
 	}
 	if request.Archive == ".zip" {
