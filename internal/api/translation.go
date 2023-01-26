@@ -55,7 +55,7 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if translationRequest.Type == model.MattermostWorkspaceBackupType && translationRequest.UploadID != nil {
+	if translationRequest.Type == model.MattermostWorkspaceBackupType && translationRequest.UploadID == nil {
 		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
 		validator := validators.NewMattermostValidator()
 
