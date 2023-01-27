@@ -57,7 +57,9 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	// If we're providing an archive from a bucket (and not uploading it directly) we need to download
 	// and validate it locally before trying to import it to avoid import errors later.
-	if translationRequest.UploadID == nil {
+	// We purposely only verify Mattermost archives since the Slack Validator is a no-op, to avoid
+	// unnecessary downloads.
+	if translationRequest.UploadID == nil && translationRequest.Type == model.MattermostWorkspaceBackupType {
 		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
 		validator, err := validators.NewValidator(translationRequest.Type)
 		if err != nil {

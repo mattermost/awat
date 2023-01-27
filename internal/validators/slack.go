@@ -7,6 +7,6 @@ func (v *SlackValidator) Validate(archiveName string) error {
 }
 
 // NewSlackValidator returns a validator for slack archive types
-func NewSlackValidator() *MattermostValidator {
-	return &MattermostValidator{}
+func NewSlackValidator() *SlackValidator {
+	return &SlackValidator{}
 }

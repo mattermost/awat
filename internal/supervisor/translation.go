@@ -69,7 +69,11 @@ func (s *TranslationSupervisor) supervise() {
 		logger.WithError(err).Error("failed to lock translation")
 		return
 	}
-	defer s.store.UnlockTranslation(translation)
+	defer func() {
+		if err := s.store.UnlockTranslation(translation); err != nil {
+			logger.WithError(err).Error("error unlocking translation")
+		}
+	}()
 
 	trans, err := translator.NewTranslator(
 		&translator.TranslatorOptions{
@@ -107,26 +111,29 @@ func (s *TranslationSupervisor) supervise() {
 		}
 	}()
 
-	logger.Info("Valiating translation result")
-	// Validate the translation before considering it "importable"
-	validator, err := validators.NewValidator(model.MattermostWorkspaceBackupType)
-	if err != nil {
-		logger.WithError(err).Error("error getting validator")
-		return
-	}
-
-	localArchivePath, err := trans.GetOutputArchiveLocalPath()
-	if err != nil {
-		logger.WithError(err).Error("error getting local archive path for validation")
-		return
-	}
-	if localArchivePath != "" {
-		if err := validator.Validate(localArchivePath); err != nil {
-			logger.WithError(err).Error("validation error on translation output")
+	// Only validate if the origin is not a mattermost type, since we validate those on the API calls
+	if translation.Type != model.MattermostWorkspaceBackupType {
+		logger.Info("Valiating translation result")
+		// Validate the translation before considering it "importable"
+		validator, err := validators.NewValidator(model.MattermostWorkspaceBackupType)
+		if err != nil {
+			logger.WithError(err).Error("error getting validator")
 			return
 		}
+
+		localArchivePath, err := trans.GetOutputArchiveLocalPath()
+		if err != nil {
+			logger.WithError(err).Error("error getting local archive path for validation")
+			return
+		}
+		if localArchivePath != "" {
+			if err := validator.Validate(localArchivePath); err != nil {
+				logger.WithError(err).Error("validation error on translation output")
+				return
+			}
+		}
 	} else {
-		logger.Warn("skipping validation due to missing local archive path")
+		logger.Debug("avoiding validation since input already was a mattermost archive, assuming already validated")
 	}
 
 	importResource := fmt.Sprintf("%s/%s", s.bucket, output)
