@@ -128,6 +128,37 @@ func TestTranslations(t *testing.T) {
 		assert.Equal(t, "installationID", translation.InstallationID)
 	})
 
+	t.Run("start a new translation just uploaded", func(t *testing.T) {
+		gomock.InOrder(
+			// Missing upload, since UploadID was provided
+			store.EXPECT().
+				CreateTranslation(
+					// a more specific expectation could be applied here, but it
+					// doesn't seem worth the time to define a Matcher and get it
+					// all working just to ignore the nondeterministic ID that's
+					// passed to this function because the ID is generated at
+					// runtime
+					gomock.Any(),
+				).
+				Return(nil).
+				Times(1),
+		)
+
+		resp, errTest := http.Post(fmt.Sprintf("%s/translate", ts.URL), "application/json",
+			strings.NewReader(
+				`{"Type": "mattermost", "InstallationID": "installationID", "Archive": "foo.zip", "Team": "teamname", "UploadID": "foo"}`,
+			))
+		require.NoError(t, errTest)
+		assert.Equal(t, http.StatusAccepted, resp.StatusCode)
+
+		translation, errTest := model.NewTranslationStatusFromReader(resp.Body)
+		require.NoError(t, errTest)
+		assert.Equal(t, "foo.zip", translation.Resource)
+		assert.Equal(t, "teamname", translation.Team)
+		assert.Equal(t, "installationID", translation.InstallationID)
+		assert.Equal(t, "foo", *translation.UploadID)
+	})
+
 	t.Run("start a new translation, bad resource name", func(t *testing.T) {
 		mockAWS.ResourceExists = false
 

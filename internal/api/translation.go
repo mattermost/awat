@@ -57,32 +57,34 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 
 	// If we're providing an archive from a bucket (and not uploading it directly) we need to download
 	// and validate it locally before trying to import it to avoid import errors later.
-	// We purposely only verify Mattermost archives since the Slack Validator is a no-op, to avoid
-	// unnecessary downloads.
-	if translationRequest.UploadID == nil && translationRequest.Type == model.MattermostWorkspaceBackupType {
-		c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
-		validator, err := validators.NewValidator(translationRequest.Type)
-		if err != nil {
-			c.Logger.WithError(err).Error("error getting validator")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	if translationRequest.UploadID == nil {
+		// We purposely only verify Mattermost archives since the Slack Validator is a no-op, so we avoid
+		// unnecessary downloads this way.
+		if translationRequest.Type == model.MattermostWorkspaceBackupType {
+			c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
+			validator, err := validators.NewValidator(translationRequest.Type)
+			if err != nil {
+				c.Logger.WithError(err).Error("error getting validator")
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 
-		archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
-		if err != nil {
-			c.Logger.WithError(err).Error("error downloading archive for validation")
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(err.Error()))
-			return
-		}
-		defer cleanup()
-		c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "archivePath": archivePath}).Debug("Downloaded archive for validation")
+			archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
+			if err != nil {
+				c.Logger.WithError(err).Error("error downloading archive for validation")
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(err.Error()))
+				return
+			}
+			defer cleanup()
+			c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "archivePath": archivePath}).Debug("Downloaded archive for validation")
 
-		if err := validator.Validate(archivePath); err != nil {
-			c.Logger.WithError(err).Error("archive validation failed")
-			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(err.Error()))
-			return
+			if err := validator.Validate(archivePath); err != nil {
+				c.Logger.WithError(err).Error("archive validation failed")
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(err.Error()))
+				return
+			}
 		}
 
 		// Since we are checking a potentially manually or externally uploaded archive, store the result inside the
