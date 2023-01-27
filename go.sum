@@ -415,8 +415,6 @@ github.com/mattermost/mattermost-server/v6 v6.0.0-20221215180408-ea5f25fc6658 h1
 github.com/mattermost/mattermost-server/v6 v6.0.0-20221215180408-ea5f25fc6658/go.mod h1:Eu6nct2XZRPlHHW4MfZtjli5bY7G9QomKcor/lm+0Sw=
 github.com/mattermost/mmctl/v6 v6.4.2-0.20230116134424-2a539c02d71d h1:+Ecq870W5WW58F8apuqezVYD+CFIEpreLoklZoj2vLw=
 github.com/mattermost/mmctl/v6 v6.4.2-0.20230116134424-2a539c02d71d/go.mod h1:rsOrUM25aC3ZUExTqj2y4qBb5cLkiVHvOSL+OwFBIrY=
-github.com/mattermost/mmetl v0.1.2-0.20230124124855-68eed38e1a55 h1:naFRuCNHvWnnR+0RHoIRBaggX324kGH7QT5SKNecN78=
-github.com/mattermost/mmetl v0.1.2-0.20230124124855-68eed38e1a55/go.mod h1:RPYg2vjcNaVDwgpUAClvAmR18ok9/M3jIBEpRWWkIL8=
 github.com/mattermost/mmetl v0.1.2-0.20230127062643-4a523350a798 h1:GT2D0zCdjVuKbU6IfT9AFwRNTofn6bPSET5ibyOmd5M=
 github.com/mattermost/mmetl v0.1.2-0.20230127062643-4a523350a798/go.mod h1:RPYg2vjcNaVDwgpUAClvAmR18ok9/M3jIBEpRWWkIL8=
 github.com/mattermost/rotator v0.2.0 h1:R3dlMHZjGR7t5T2bk76heDwpypl9rd2sZj4GoAZyuWU=
