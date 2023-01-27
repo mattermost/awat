@@ -16,7 +16,7 @@ require (
 	github.com/mattermost/mattermost-cloud v0.53.2-0.20220330133756-d224124ba315
 	// mmctl: 7.7.1
 	github.com/mattermost/mmctl/v6 v6.4.2-0.20230116134424-2a539c02d71d
-	github.com/mattermost/mmetl v0.1.2-0.20230124124855-68eed38e1a55
+	github.com/mattermost/mmetl v0.1.2-0.20230127062643-4a523350a798
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
