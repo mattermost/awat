@@ -65,14 +65,13 @@ func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
 	})
 
 	if err != nil {
-		if aErr, ok := err.(smithy.APIError); ok {
-			switch aErr.ErrorCode() {
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) {
+			switch awsErr.ErrorCode() {
 			case "NoSuchBucket":
 				return false, errors.Errorf("bucket %s does not exist", a.bucket)
 			case "NotFound":
 				return false, nil
-			default:
-				return false, err
 			}
 		}
 		return false, err
