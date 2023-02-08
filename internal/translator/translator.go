@@ -36,7 +36,7 @@ func NewTranslator(t *TranslatorOptions) (Translator, error) {
 	}
 
 	if t.ArchiveType == model.SlackWorkspaceBackupType {
-		return slack.NewSlackTranslator(t.Bucket, t.WorkingDir), nil
+		return slack.NewSlackTranslator(t.Bucket, t.WorkingDir)
 	}
 
 	if t.ArchiveType == model.MattermostWorkspaceBackupType {
