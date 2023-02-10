@@ -6,29 +6,41 @@ package slack
 
 import (
 	"archive/zip"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/mattermost/awat/internal/common"
+	"github.com/mattermost/awat/model"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/mattermost/awat/model"
 )
 
 type SlackTranslator struct {
-	bucket             string
-	workingDir         string
+	s3Client   *s3.Client
+	bucket     string
+	workingDir string
 	outputZipLocalPath string
 }
 
-func NewSlackTranslator(bucket, workingDir string) *SlackTranslator {
-	return &SlackTranslator{bucket: bucket, workingDir: workingDir}
+func NewSlackTranslator(bucket, workingDir string) (*SlackTranslator, error) {
+	awsConfig, err := common.NewAWSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	s3Client := s3.NewFromConfig(awsConfig)
+
+	return &SlackTranslator{
+		s3Client:   s3Client,
+		bucket:     bucket,
+		workingDir: workingDir,
+	}, nil
 }
 
 // Translate satisfies the Translator interface for the
@@ -111,16 +123,17 @@ func (st *SlackTranslator) Cleanup() error {
 // from S3 and writing it out to workdir, which is assumed to be of
 // sufficient capacity for the archive
 func (st *SlackTranslator) fetchSlackArchive(logger log.FieldLogger, workdir, resource string) (string, error) {
-	sess := session.Must(session.NewSession())
 
-	downloader := s3manager.NewDownloader(sess)
+	downloader := s3manager.NewDownloader(st.s3Client)
 
 	inputArchive, err := os.Create(workdir + "/input.zip")
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open temp file to download input archive to")
 	}
 
-	nBytes, err := downloader.Download(inputArchive,
+	nBytes, err := downloader.Download(
+		context.TODO(),
+		inputArchive,
 		&s3.GetObjectInput{
 			Bucket: &st.bucket,
 			Key:    &resource,
@@ -236,8 +249,7 @@ func (st *SlackTranslator) createOutputZipfile(logger log.FieldLogger, attachmen
 // uploadTransformedZip uploads the prepared Mattermost-compatible
 // archive to S3 for future import
 func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
-	sess := session.Must(session.NewSession())
-	uploader := s3manager.NewUploader(sess)
+	uploader := s3manager.NewUploader(st.s3Client)
 	body, err := os.Open(output)
 	if err != nil {
 		return nil
@@ -247,7 +259,8 @@ func (st *SlackTranslator) uploadTransformedZip(output, bucket string) error {
 	outputNameSplitPath := strings.Split(output, "/")
 	outputShortName := outputNameSplitPath[len(outputNameSplitPath)-1]
 	_, err = uploader.Upload(
-		&s3manager.UploadInput{
+		context.TODO(),
+		&s3.PutObjectInput{
 			Bucket: &bucket,
 			Body:   body,
 			Key:    &outputShortName,

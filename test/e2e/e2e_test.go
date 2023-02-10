@@ -19,6 +19,7 @@ package e2e
 */
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/mattermost/awat/internal/common"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
@@ -713,17 +714,19 @@ func retryFor(d time.Duration, doer func() bool) {
 
 func deleteS3Object(bucket, key string) error {
 
-	awsSession, err := session.NewSession()
+	awsConfig, err := common.NewAWSConfig()
 	if err != nil {
 		return err
 	}
 
-	s3client := s3.New(awsSession)
+	s3client := s3.NewFromConfig(awsConfig)
 
-	_, err = s3client.DeleteObject(&s3.DeleteObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-	})
+	_, err = s3client.DeleteObject(
+		context.TODO(),
+		&s3.DeleteObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+		})
 
 	return err
 }

@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
 	log "github.com/sirupsen/logrus"
