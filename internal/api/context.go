@@ -5,14 +5,15 @@
 package api
 
 import (
+	"context"
 	"net/http"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
+	"github.com/mattermost/awat/internal/common"
 	cloudModel "github.com/mattermost/mattermost-cloud/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -35,29 +36,42 @@ type AWS interface {
 	UploadArchiveToS3(uploadFileName, destKeyName string) error
 }
 type AWSContext struct {
-	Session *session.Session
-	Bucket  string
+	s3Client *s3.Client
+	bucket   string
+}
+
+func NewAWSContext(bucket string) (*AWSContext, error) {
+	awsConfig, err := common.NewAWSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	s3Client := s3.NewFromConfig(awsConfig)
+
+	return &AWSContext{
+		s3Client: s3Client,
+		bucket:   bucket,
+	}, nil
 }
 
 func (a *AWSContext) GetBucketName() string {
-	return a.Bucket
+	return a.bucket
 }
 
 func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
-	s3client := s3.New(a.Session)
-	_, err := s3client.HeadObject(&s3.HeadObjectInput{
-		Bucket: aws.String(a.Bucket),
+	_, err := a.s3Client.HeadObject(context.TODO(), &s3.HeadObjectInput{
+		Bucket: aws.String(a.bucket),
 		Key:    aws.String(file),
 	})
+
 	if err != nil {
-		if aerr, ok := err.(awserr.Error); ok {
-			switch aerr.Code() {
-			case s3.ErrCodeNoSuchBucket:
-				return false, errors.Errorf("bucket %s does not exist", a.Bucket)
-			case "NotFound": // s3.ErrCodeNoSuchKey does not work, aws is missing this error code so we hardwire a string
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) {
+			switch awsErr.ErrorCode() {
+			case "NoSuchBucket":
+				return false, errors.Errorf("bucket %s does not exist", a.bucket)
+			case "NotFound":
 				return false, nil
-			default:
-				return false, err
 			}
 		}
 		return false, err
@@ -67,15 +81,15 @@ func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
 }
 
 func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error {
-	s3client := s3.New(a.Session)
 	uploadFile, err := os.Open(uploadFileName)
 	if err != nil {
 		return errors.New("failed to open file before upload")
 	}
 
-	uploader := s3manager.NewUploaderWithClient(s3client)
+	uploader := s3manager.NewUploader(a.s3Client)
 	_, err = uploader.Upload(
-		&s3manager.UploadInput{
+		context.TODO(),
+		&s3.PutObjectInput{
 			Bucket: aws.String(a.GetBucketName()),
 			Key:    &destKeyName,
 			Body:   uploadFile,

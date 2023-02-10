@@ -12,17 +12,15 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/mattermost/awat/internal/api"
 	"github.com/mattermost/awat/internal/store"
 	"github.com/mattermost/awat/internal/supervisor"
 	"github.com/mattermost/awat/model"
 	cmodel "github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -44,7 +42,7 @@ func init() {
 	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
 	serverCmd.PersistentFlags().Bool(keepImportDataFlag, true, "Whether to preserve import bundles after import completion or not")
 	serverCmd.PersistentFlags().Bool(debugFlag, true, "Whether to output debug logs")
-	serverCmd.MarkPersistentFlagRequired(bucketFlag)
+	_ = serverCmd.MarkPersistentFlagRequired(bucketFlag)
 }
 
 var serverCmd = &cobra.Command{
@@ -111,7 +109,7 @@ var serverCmd = &cobra.Command{
 			return err
 		}
 
-		awsSession, err := session.NewSession()
+		awsContext, err := api.NewAWSContext(bucket)
 		if err != nil {
 			return err
 		}
@@ -125,12 +123,9 @@ var serverCmd = &cobra.Command{
 		router := mux.NewRouter()
 		api.Register(router,
 			&api.Context{
-				Store:  sqlStore,
-				Logger: logger,
-				AWS: &api.AWSContext{
-					Session: awsSession,
-					Bucket:  bucket,
-				},
+				Store:   sqlStore,
+				Logger:  logger,
+				AWS:     awsContext,
 				Workdir: workdir,
 			})
 
