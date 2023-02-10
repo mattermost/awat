@@ -100,19 +100,20 @@ func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error
 }
 
 func (a *AWSContext) DownloadArchiveFromS3(archiveName string) (path string, cleanup func(), err error) {
-	s3client := s3.New(a.Session)
-
 	tempFile, err := os.CreateTemp("", "awat-archive-")
 	if err != nil {
 		return "", nil, errors.Wrap(err, "error creating tempoorary file to write to")
 	}
 
-	downloader := s3manager.NewDownloaderWithClient(s3client)
+	downloader := s3manager.NewDownloader(a.s3Client)
 
-	_, err = downloader.Download(tempFile, &s3.GetObjectInput{
-		Bucket: aws.String(a.GetBucketName()),
-		Key:    aws.String(archiveName),
-	})
+	_, err = downloader.Download(
+		context.TODO(),
+		tempFile,
+		&s3.GetObjectInput{
+			Bucket: aws.String(a.GetBucketName()),
+			Key:    aws.String(archiveName),
+		})
 	if err != nil {
 		return "", nil, errors.Wrap(err, "error downloading from s3")
 	}
