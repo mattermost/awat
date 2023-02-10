@@ -46,6 +46,7 @@ const (
 type setting struct {
 	bucket      string
 	file        string
+	uploadID    string
 	key         string
 	testDomain  string
 	provisioner *cloud.Client
@@ -209,6 +210,7 @@ func setupEnvironment(t *testing.T, importType model.BackupType) *setting {
 	require.NoError(t, err)
 
 	settings.key = archiveName
+	settings.uploadID = uploadID
 
 	t.Cleanup(func() {
 		err = deleteS3Object(settings.bucket, settings.key)
@@ -330,6 +332,7 @@ func startTranslation(
 			InstallationID: installation.ID,
 			Archive:        settings.key,
 			Team:           teamName,
+			UploadID:       &settings.uploadID,
 		})
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateRequested, ts.State)
