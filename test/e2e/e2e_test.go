@@ -257,7 +257,7 @@ func getInstallation(t *testing.T, env *setting) *cloud.InstallationDTO {
 
 	t.Cleanup(
 		func() {
-			retryFor(time.Minute*5, func() bool {
+			retryFor(t, time.Minute*5, func() bool {
 				err := env.provisioner.DeleteInstallation(installation.ID)
 				if err != nil {
 					t.Log("nonfatal error deleting an installation during cleanup: " + err.Error())
@@ -273,7 +273,7 @@ func getInstallation(t *testing.T, env *setting) *cloud.InstallationDTO {
 
 	t.Log("wait for the Installation to become stable")
 
-	retryFor(time.Minute*10, func() bool {
+	retryFor(t, time.Minute*10, func() bool {
 		var err error
 		installation, err = env.provisioner.GetInstallation(installation.ID,
 			&cloud.GetInstallationRequest{
@@ -336,7 +336,7 @@ func startTranslation(
 
 	t.Logf("wait for translation %s to start", ts.ID)
 
-	retryFor(time.Minute*5, func() bool {
+	retryFor(t, time.Minute*5, func() bool {
 		ts, err = client.GetTranslationStatus(ts.ID)
 		require.NoError(t, err)
 		if ts.State != model.TranslationStateRequested {
@@ -370,7 +370,7 @@ func waitForTranslationToSucceed(
 
 	t.Logf("wait for translation %s to complete", ts.ID)
 
-	retryFor(time.Minute*5, func() bool {
+	retryFor(t, time.Minute*5, func() bool {
 		ts, err = client.GetTranslationStatus(ts.ID)
 		require.NoError(t, err)
 		if ts.State != model.TranslationStateInProgress {
@@ -379,6 +379,7 @@ func waitForTranslationToSucceed(
 		}
 		return false
 	})
+
 	require.NotZero(t, ts.CompleteAt)
 
 	ts, err = client.GetTranslationStatus(ts.ID)
@@ -390,7 +391,7 @@ func waitForTranslationToSucceed(
 func waitForImportStatusChange(t *testing.T, client *model.Client, importID string, stateFrom, statusTo string) {
 	t.Logf("wait for import to move from %s state to %s", stateFrom, statusTo)
 
-	retryFor(time.Minute*5, func() bool {
+	retryFor(t, time.Minute*5, func() bool {
 		importStatus, err := client.GetImportStatus(importID)
 		require.NoError(t, err)
 		return importStatus.State != stateFrom
@@ -404,7 +405,7 @@ func waitForImportStatusChange(t *testing.T, client *model.Client, importID stri
 func waitForInstallationStatus(t *testing.T, provisioner *cloud.Client, installationID string, state string) {
 	t.Logf("wait for installation to be in %s state", state)
 
-	retryFor(time.Minute*5, func() bool {
+	retryFor(t, time.Minute*5, func() bool {
 		installation, err := provisioner.GetInstallation(
 			installationID,
 			&cloud.GetInstallationRequest{
@@ -427,9 +428,6 @@ func waitForImportToSucceed(
 	importStatusList, err := client.GetImportStatusesByTranslation(ts.ID)
 	require.Equal(t, 1, len(importStatusList))
 	importStatus := importStatusList[0]
-	if importStatus.StartAt == 0 {
-		require.Equal(t, model.ImportStateRequested, importStatus.State)
-	}
 
 	// Step 1
 	// It should be in the requested state adn then move to the pre-adjustment state
@@ -460,6 +458,7 @@ func waitForImportToSucceed(
 	// Installation should move to the stable state
 	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateStable)
 
+	t.Log("Checking import status")
 	importStatus, err = client.GetImportStatus(importStatus.ID)
 	require.NoError(t, err)
 	require.NotZero(t, importStatus.CompleteAt)
@@ -703,12 +702,22 @@ func checkUsers(env *completedEnvironment) {
 }
 
 // if the doer returns true, consider it done, and stop retrying
-func retryFor(d time.Duration, doer func() bool) {
-	for i := float64(0); i < d.Seconds(); i++ {
-		if doer() {
-			break
+func retryFor(t *testing.T, d time.Duration, doer func() bool) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if doer() {
+				return
+			}
+		case <-timer.C:
+			t.Error("failed waiting for condition")
+			t.FailNow()
+			return
 		}
-		time.Sleep(time.Second)
 	}
 }
 
