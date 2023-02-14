@@ -704,7 +704,7 @@ func checkUsers(env *completedEnvironment) {
 func retryFor(t *testing.T, d time.Duration, doer func() bool) {
 	timer := time.NewTimer(d)
 	defer timer.Stop()
-	ticker := time.NewTicker(time.Second * 5)
+	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
