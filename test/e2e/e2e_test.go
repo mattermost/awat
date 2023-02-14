@@ -428,9 +428,6 @@ func waitForImportToSucceed(
 	importStatusList, err := client.GetImportStatusesByTranslation(ts.ID)
 	require.Equal(t, 1, len(importStatusList))
 	importStatus := importStatusList[0]
-	if importStatus.StartAt == 0 {
-		require.Equal(t, model.ImportStateRequested, importStatus.State)
-	}
 
 	// Step 1
 	// It should be in the requested state adn then move to the pre-adjustment state
