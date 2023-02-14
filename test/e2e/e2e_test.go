@@ -458,6 +458,7 @@ func waitForImportToSucceed(
 	// Installation should move to the stable state
 	waitForInstallationStatus(t, provisioner, installation.ID, cloud.InstallationStateStable)
 
+	t.Log("Checking import status")
 	importStatus, err = client.GetImportStatus(importStatus.ID)
 	require.NoError(t, err)
 	require.NotZero(t, importStatus.CompleteAt)
