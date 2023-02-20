@@ -123,7 +123,7 @@ func (a *AWSContext) DownloadArchiveFromS3(archiveName string) (path string, cle
 		os.Remove(path)
 	}
 
-	return
+	return path, cleanup, err
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.
