@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 
+	"github.com/aws/smithy-go/ptr"
 	"github.com/mattermost/awat/model"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -145,20 +145,19 @@ var startTranslationCmd = &cobra.Command{
 		}
 
 		var err error
+		var uploadID *string
 		upload, _ := cmd.Flags().GetBool(uploadFile)
 		if upload {
-			archiveName, err := awat.UploadArchiveForTranslation(archive)
+			archive, err = awat.UploadArchiveForTranslation(archive, translationType)
 			if err != nil {
 				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
 
-			uploadID := strings.TrimSuffix(archiveName, ".zip")
+			uploadID = ptr.String(model.TrimExtensionFromArchiveFilename(archive))
 
-			if err := awat.WaitForUploadToComplete(uploadID); err != nil {
-				return errors.Wrapf(err, "failed to upload %s", uploadID)
+			if err = awat.WaitForUploadToComplete(*uploadID); err != nil {
+				return errors.Wrapf(err, "failed to upload %s", archive)
 			}
-
-			archive = archiveName
 		}
 
 		var status *model.TranslationStatus
@@ -167,6 +166,7 @@ var startTranslationCmd = &cobra.Command{
 				Type:           translationType,
 				InstallationID: installation,
 				Archive:        archive,
+				UploadID:       uploadID,
 				Team:           team,
 			})
 

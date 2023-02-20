@@ -63,17 +63,17 @@ func (mr *MockStoreMockRecorder) CreateTranslation(t interface{}) *gomock.Call {
 }
 
 // CreateUpload mocks base method.
-func (m *MockStore) CreateUpload(id string) error {
+func (m *MockStore) CreateUpload(id string, archiveType model.BackupType) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateUpload", id)
+	ret := m.ctrl.Call(m, "CreateUpload", id, archiveType)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateUpload indicates an expected call of CreateUpload.
-func (mr *MockStoreMockRecorder) CreateUpload(id interface{}) *gomock.Call {
+func (mr *MockStoreMockRecorder) CreateUpload(id, archiveType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUpload", reflect.TypeOf((*MockStore)(nil).CreateUpload), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUpload", reflect.TypeOf((*MockStore)(nil).CreateUpload), id, archiveType)
 }
 
 // GetAllImports mocks base method.

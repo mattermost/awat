@@ -7,7 +7,7 @@ package model
 import (
 	"encoding/json"
 	"io"
-	"strings"
+	"net/url"
 
 	"github.com/pkg/errors"
 )
@@ -24,6 +24,7 @@ type TranslationRequest struct {
 	InstallationID string
 	Archive        string
 	Team           string
+	UploadID       *string
 }
 
 // Validate validates the values of a translation create request.
@@ -37,7 +38,7 @@ func (request *TranslationRequest) Validate() error {
 	if request.Type == SlackWorkspaceBackupType && len(request.Team) == 0 {
 		return errors.New("must specify team with slack backup type")
 	}
-	if !strings.HasSuffix(request.Archive, ".zip") {
+	if !IsValidArchiveName(request.Archive) {
 		return errors.New("archive must be a valid zip file")
 	}
 	if request.Archive == ".zip" {
@@ -83,6 +84,15 @@ func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error
 	return &status, nil
 }
 
+func NewTranslationStatusFromBytes(data []byte) (*TranslationStatus, error) {
+	var status TranslationStatus
+	err := json.Unmarshal(data, &status)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode translation start request")
+	}
+	return &status, nil
+}
+
 func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus, error) {
 	var status []*TranslationStatus
 	err := json.NewDecoder(reader).Decode(&status)
@@ -90,4 +100,24 @@ func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus,
 		return nil, errors.Wrap(err, "failed to decode translation start request")
 	}
 	return status, nil
+}
+
+type ArchiveUploadRequest struct {
+	Type BackupType
+}
+
+func (r ArchiveUploadRequest) Validate() error {
+	if r.Type != SlackWorkspaceBackupType && r.Type != MattermostWorkspaceBackupType {
+		return errors.New("invalid backup type")
+	}
+
+	return nil
+}
+
+func NewArchiveUploadFromURLQuery(values url.Values) (*ArchiveUploadRequest, error) {
+	var request ArchiveUploadRequest
+
+	request.Type = BackupType(values.Get("type"))
+
+	return &request, nil
 }

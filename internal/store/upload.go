@@ -47,7 +47,7 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 
 // CreateUpload creates an upload object in the database to represent a
 // started upload
-func (sqlStore *SQLStore) CreateUpload(id string) error {
+func (sqlStore *SQLStore) CreateUpload(id string, archiveType model.BackupType) error {
 	_, err := sqlStore.execBuilder(sqlStore.db, sq.
 		Insert(UploadTableName).
 		SetMap(map[string]interface{}{
@@ -55,6 +55,7 @@ func (sqlStore *SQLStore) CreateUpload(id string) error {
 			"CompleteAt": 0,
 			"ID":         id,
 			"Error":      "",
+			"Type":       archiveType,
 		}),
 	)
 

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"time"
@@ -41,12 +40,18 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 		return nil, err
 	}
 	defer closeBody(resp)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.New("failed to read response body")
+	}
+
 	switch resp.StatusCode {
 	case http.StatusAccepted:
-		return NewTranslationStatusFromReader(resp.Body)
+		return NewTranslationStatusFromBytes(bodyBytes)
 
 	default:
-		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+		return nil, errors.Errorf("failed with status code %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 }
 
@@ -239,7 +244,7 @@ func (c *Client) GetImportStatus(importID string) (*ImportStatus, error) {
 // closeBody ensures the Body of an http.Response is properly closed.
 func closeBody(r *http.Response) {
 	if r.Body != nil {
-		_, _ = ioutil.ReadAll(r.Body)
+		_, _ = io.Copy(io.Discard, r.Body)
 		_ = r.Body.Close()
 	}
 }
@@ -308,13 +313,13 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 }
 
 // UploadArchiveForTranslation uploads the file specified as an argument to S3 via the AWAT
-func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
+func (c *Client) UploadArchiveForTranslation(filename string, archiveType BackupType) (string, error) {
 	inputFile, err := os.Open(filename)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to read input file %s", filename)
 	}
 
-	req, err := http.NewRequest("POST", c.buildURL("/upload"), inputFile)
+	req, err := http.NewRequest("POST", c.buildURL("/upload?type=%s", archiveType), inputFile)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create HTTP request")
 	}
@@ -335,26 +340,22 @@ func (c *Client) UploadArchiveForTranslation(filename string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to send HTTP request to AWAT")
 	}
+	defer closeBody(resp)
 
-	defer func() {
-		_, _ = io.Copy(io.Discard, resp.Body)
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusAccepted {
-		return "", errors.Errorf("received unexpected code %d from AWAT", resp.StatusCode)
-	}
-
-	archiveNameBytes, err := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", errors.New("failed to read response body")
 	}
 
-	if archiveNameBytes == nil {
+	if resp.StatusCode != http.StatusAccepted {
+		return "", errors.Errorf("received unexpected code %d from AWAT: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	if bodyBytes == nil {
 		return "", errors.New("invalid response data")
 	}
 
-	return string(archiveNameBytes), nil
+	return string(bodyBytes), nil
 }
 
 func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
@@ -362,12 +363,14 @@ func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+	defer closeBody(resp)
+
 	if resp.StatusCode != http.StatusOK {
 		return false, errors.Errorf("got unexpected status code %d", resp.StatusCode)
 	}
+
 	upload := new(Upload)
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
 	}

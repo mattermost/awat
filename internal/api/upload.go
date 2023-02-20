@@ -6,19 +6,18 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/mattermost/awat/internal/validators"
 	"github.com/mattermost/awat/model"
 )
 
 func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
-	uploadFile, err := ioutil.TempFile(c.Workdir, "upload-")
+	uploadFile, err := os.CreateTemp(c.Workdir, "upload-")
 	if err != nil {
 		c.Logger.Error("failed to open temp file to write upload to")
 	}
@@ -28,6 +27,15 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Logger.Debugln(r.Header)
 		c.Logger.Error("Content-Length header must be set")
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Validate parameters
+	params, _ := model.NewArchiveUploadFromURLQuery(r.URL.Query())
+	if err := params.Validate(); err != nil {
+		c.Logger.WithError(err).Error("import parameters validation failed")
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -55,7 +63,18 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.Store.CreateUpload(uploadID)
+	if params.Type == model.MattermostWorkspaceBackupType {
+		c.Logger.Info("Validating upload")
+		validator := validators.NewMattermostValidator()
+		if err := validator.Validate(uploadFile.Name()); err != nil {
+			c.Logger.WithError(err).Error("archive validation failed")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	err = c.Store.CreateUpload(uploadID, params.Type)
 	if err != nil {
 		c.Logger.WithError(err).Error("failed to store upload ID for tracking progress")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -83,7 +102,7 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("content-type", "text/plain")
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte(fmt.Sprintf("%s", destKeyName)))
+	_, _ = w.Write([]byte(destKeyName))
 }
 
 func handleCheckUploadStatus(c *Context, w http.ResponseWriter, r *http.Request) {

@@ -30,6 +30,7 @@ type Translation struct {
 	StartAt        int64
 	CompleteAt     int64
 	LockedBy       string
+	UploadID       *string
 }
 
 // State provides a container for returning the state with the
@@ -58,6 +59,7 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 		InstallationID: translationRequest.InstallationID,
 		Type:           translationRequest.Type,
 		Resource:       translationRequest.Archive,
+		UploadID:       translationRequest.UploadID,
 		Team:           teamName,
 	}
 }

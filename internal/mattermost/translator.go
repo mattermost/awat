@@ -4,7 +4,9 @@
 
 package mattermost
 
-import "github.com/mattermost/awat/model"
+import (
+	"github.com/mattermost/awat/model"
+)
 
 type MattermostTranslator struct{}
 
@@ -14,4 +16,12 @@ func NewMattermostTranslator() *MattermostTranslator {
 
 func (mt *MattermostTranslator) Translate(translation *model.Translation) (string, error) {
 	return translation.Resource, nil
+}
+
+func (mt *MattermostTranslator) GetOutputArchiveLocalPath() (string, error) {
+	return "", nil
+}
+
+func (mt *MattermostTranslator) Cleanup() error {
+	return nil
 }

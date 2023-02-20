@@ -46,6 +46,7 @@ const (
 type setting struct {
 	bucket      string
 	file        string
+	uploadID    string
 	key         string
 	testDomain  string
 	provisioner *cloud.Client
@@ -202,13 +203,14 @@ func setupEnvironment(t *testing.T, importType model.BackupType) *setting {
 	}
 
 	t.Log("Upload the archive for translation")
-	archiveName, err := settings.awat.UploadArchiveForTranslation(settings.file)
+	archiveName, err := settings.awat.UploadArchiveForTranslation(settings.file, importType)
 	require.NoError(t, err)
-	uploadID := strings.TrimSuffix(archiveName, ".zip")
+	uploadID := model.TrimExtensionFromArchiveFilename(archiveName)
 	err = settings.awat.WaitForUploadToComplete(uploadID)
 	require.NoError(t, err)
 
 	settings.key = archiveName
+	settings.uploadID = uploadID
 
 	t.Cleanup(func() {
 		err = deleteS3Object(settings.bucket, settings.key)
@@ -330,6 +332,7 @@ func startTranslation(
 			InstallationID: installation.ID,
 			Archive:        settings.key,
 			Team:           teamName,
+			UploadID:       &settings.uploadID,
 		})
 	require.NoError(t, err)
 	require.Equal(t, model.TranslationStateRequested, ts.State)

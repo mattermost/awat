@@ -34,7 +34,9 @@ type AWS interface {
 	GetBucketName() string
 	CheckBucketFileExists(file string) (bool, error)
 	UploadArchiveToS3(uploadFileName, destKeyName string) error
+	DownloadArchiveFromS3(filename string) (string, func(), error)
 }
+
 type AWSContext struct {
 	s3Client *s3.Client
 	bucket   string
@@ -95,6 +97,33 @@ func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error
 			Body:   uploadFile,
 		})
 	return err
+}
+
+func (a *AWSContext) DownloadArchiveFromS3(archiveName string) (path string, cleanup func(), err error) {
+	tempFile, err := os.CreateTemp("", "awat-archive-")
+	if err != nil {
+		return "", nil, errors.Wrap(err, "error creating tempoorary file to write to")
+	}
+
+	downloader := s3manager.NewDownloader(a.s3Client)
+
+	_, err = downloader.Download(
+		context.TODO(),
+		tempFile,
+		&s3.GetObjectInput{
+			Bucket: aws.String(a.GetBucketName()),
+			Key:    aws.String(archiveName),
+		})
+	if err != nil {
+		return "", nil, errors.Wrap(err, "error downloading from s3")
+	}
+
+	path = tempFile.Name()
+	cleanup = func() {
+		os.Remove(path)
+	}
+
+	return path, cleanup, err
 }
 
 // Clone creates a shallow copy of context, allowing clones to apply per-request changes.

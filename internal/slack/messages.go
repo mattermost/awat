@@ -50,7 +50,7 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 		return err
 	}
 
-	err = slackTransformer.Transform(slackExport, attachmentsDir, false, true)
+	err = slackTransformer.Transform(slackExport, attachmentsDir, false, true, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to transform slack export")
 	}
