@@ -27,6 +27,8 @@ jobs:
     steps:
     - name: ci/checkout-repo
       uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+      with:
+        fetch-depth: 0
     - name: ci/cache-gopath
       uses: actions/cache@627f0f41f6904a5b1efbaed9f96d9eb58e92e920 # v3.2.4
       with:
