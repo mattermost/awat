@@ -11,6 +11,7 @@ import (
 	"strings"
 )
 
+// Constants defining various states of translation.
 const (
 	TranslationStateRequested  = "translation-requested"
 	TranslationStateInProgress = "translation-in-progress"
@@ -65,8 +66,10 @@ func NewTranslationFromRequest(translationRequest *TranslationRequest) *Translat
 }
 
 const (
-	TEAM_NAME_MAX_LENGTH = 64
-	TEAM_NAME_MIN_LENGTH = 2
+	// TeamNameMaxLength is the maximum length allowed for team names.
+	TeamNameMaxLength = 64
+	// TeamNameMinLength is the minimum length required for team names.
+	TeamNameMinLength = 2
 )
 
 var validTeamNameCharacter = regexp.MustCompile(`^[a-z0-9-]$`)
@@ -131,14 +134,15 @@ func isValidTeamName(s string) bool {
 		return false
 	}
 
-	if len(s) < TEAM_NAME_MIN_LENGTH ||
-		len(s) > TEAM_NAME_MAX_LENGTH {
+	if len(s) < TeamNameMinLength ||
+		len(s) > TeamNameMaxLength {
 		return false
 	}
 
 	return true
 }
 
+// isValidAlphaNum checks if a string is alphanumeric and matches the valid team name pattern.
 func isValidAlphaNum(s string) bool {
 	return validAlphaNum.MatchString(s)
 }

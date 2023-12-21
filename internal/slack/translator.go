@@ -21,13 +21,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SlackTranslator is responsible for translating Slack workspace archives into a format compatible with Mattermost.
 type SlackTranslator struct {
-	s3Client   *s3.Client
-	bucket     string
-	workingDir string
+	s3Client           *s3.Client
+	bucket             string
+	workingDir         string
 	outputZipLocalPath string
 }
 
+// NewSlackTranslator creates a new Translator instance for translating Slack workspaces.
 func NewSlackTranslator(bucket, workingDir string) (*SlackTranslator, error) {
 	awsConfig, err := common.NewAWSConfig()
 	if err != nil {
@@ -107,10 +109,12 @@ func (st *SlackTranslator) Translate(translation *model.Translation) (string, er
 	return outputShortName, nil
 }
 
+// GetOutputArchiveLocalPath returns the local file path of the translated archive.
 func (st *SlackTranslator) GetOutputArchiveLocalPath() (string, error) {
 	return st.outputZipLocalPath, nil
 }
 
+// Cleanup performs necessary cleanup operations after the translation process.
 func (st *SlackTranslator) Cleanup() error {
 	if st.outputZipLocalPath == "" {
 		return nil

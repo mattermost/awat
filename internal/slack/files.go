@@ -20,7 +20,7 @@ import (
 // FetchAttachedFiles takes the Slack input file at absolute path
 // inputArchive and parses it. Upon discovering references to attached
 // files, those files are fetched from Slack's servers and added to
-// outputArchive, which at the end will contain all of the data from
+// outputArchive, which at the end will contain all the data from
 // inputArchive as well as all attached files
 func FetchAttachedFiles(logger logrus.FieldLogger, inputArchive string, outputArchive string) error {
 	// Open the input archive.
@@ -128,20 +128,20 @@ func processChannelPostsWithFiles(logger logrus.FieldLogger, w *zip.Writer, file
 
 func processSingleFile(logger logrus.FieldLogger, w *zip.Writer, file *SlackFile, post *SlackPost) error {
 	// Check there's an Id, Name and either UrlPrivateDownload or UrlPrivate property.
-	if len(file.Id) < 1 || len(file.Name) < 1 || !(len(file.UrlPrivate) > 0 || len(file.UrlPrivateDownload) > 0) {
+	if len(file.ID) < 1 || len(file.Name) < 1 || !(len(file.URLPrivate) > 0 || len(file.URLPrivateDownload) > 0) {
 		return errors.New("file_share post has missing properties on it's File object: " + post.Ts + "\n")
 	}
 
 	// Figure out the download URL to use.
-	var downloadUrl string
-	if len(file.UrlPrivateDownload) > 0 {
-		downloadUrl = file.UrlPrivateDownload
+	var downloadURL string
+	if len(file.URLPrivateDownload) > 0 {
+		downloadURL = file.URLPrivateDownload
 	} else {
-		downloadUrl = file.UrlPrivate
+		downloadURL = file.URLPrivate
 	}
 
 	// Build the output file path.
-	outputPath := "__uploads/" + file.Id + "/" + file.Name
+	outputPath := "__uploads/" + file.ID + "/" + file.Name
 
 	// Create the file in the zip output file.
 	outFile, err := w.Create(outputPath)
@@ -150,9 +150,9 @@ func processSingleFile(logger logrus.FieldLogger, w *zip.Writer, file *SlackFile
 	}
 
 	// Fetch the file.
-	response, err := http.Get(downloadUrl)
+	response, err := http.Get(downloadURL)
 	if err != nil {
-		return errors.Wrapf(err, "failed to download the file: %s", downloadUrl)
+		return errors.Wrapf(err, "failed to download the file: %s", downloadURL)
 	}
 	defer response.Body.Close()
 
@@ -163,19 +163,23 @@ func processSingleFile(logger logrus.FieldLogger, w *zip.Writer, file *SlackFile
 	}
 
 	// Success at last.
-	logger.Debugf("Downloaded attachment into output archive: %s.\n", file.Id)
+	logger.Debugf("Downloaded attachment into output archive: %s.\n", file.ID)
 	return nil
 }
 
 // SlackFile is a holding type for files attached to Slack messages
+//
+//nolint:revive
 type SlackFile struct {
-	Id                 string `json:"id"`
+	ID                 string `json:"id"`
 	Name               string `json:"name"`
-	UrlPrivate         string `json:"url_private"`
-	UrlPrivateDownload string `json:"url_private_download"`
+	URLPrivate         string `json:"url_private"`
+	URLPrivateDownload string `json:"url_private_download"`
 }
 
 // SlackPost is a holding type for Slack posts
+//
+//nolint:revive
 type SlackPost struct {
 	User    string       `json:"user"`
 	Type    string       `json:"type"`
@@ -187,15 +191,19 @@ type SlackPost struct {
 }
 
 // SlackUser is a holding type for Users in the Slack representation
-// As it appears in users.json and /api/users.list.  There're
+// As it appears in users.json and /api/users.list.  There are
 // obviously many more fields, but we only need a couple of them.
+//
+//nolint:revive
 type SlackUser struct {
-	Id      string           `json:"id"`
+	ID      string           `json:"id"`
 	Profile SlackUserProfile `json:"profile"`
 }
 
 // SlackUserProfile is a holding type for extracting users' emails out
 // of a Slack export archive
+//
+//nolint:revive
 type SlackUserProfile struct {
 	Email string `json:"email"`
 }

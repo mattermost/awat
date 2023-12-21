@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Constants defining various states of import.
 const (
 	ImportStateRequested                  = "import-requested"
 	ImportStateInstallationPreAdjustment  = "installation-pre-adjustment"
@@ -28,6 +29,7 @@ const (
 	S3EnvKey          = "MM_FILESETTINGS_AMAZONS3REQUESTTIMEOUTMILLISECONDS"
 )
 
+// AllImportStatesPendingWork contains all import states that indicate pending work.
 var AllImportStatesPendingWork = []string{
 	ImportStateRequested,
 	ImportStateInstallationPreAdjustment,
@@ -99,6 +101,7 @@ func NewImportWorkRequestFromReader(reader io.Reader) (*ImportWorkRequest, error
 	return &request, nil
 }
 
+// NewImportCompletedWorkRequestFromReader creates an ImportCompletedWorkRequest from an io.Reader.
 func NewImportCompletedWorkRequestFromReader(reader io.Reader) (*ImportCompletedWorkRequest, error) {
 	var request ImportCompletedWorkRequest
 	err := json.NewDecoder(reader).Decode(&request)
@@ -106,16 +109,6 @@ func NewImportCompletedWorkRequestFromReader(reader io.Reader) (*ImportCompleted
 		return nil, errors.Wrap(err, "failed to decode import completion request")
 	}
 	return &request, nil
-}
-
-// NewImportFromReader creates a Import from a Reader
-func NewImportFromReader(reader io.Reader) (*Import, error) {
-	var imp Import
-	err := json.NewDecoder(reader).Decode(&imp)
-	if err != nil && err != io.EOF {
-		return nil, errors.Wrap(err, "failed to decode Import")
-	}
-	return &imp, nil
 }
 
 // NewImportStatusFromReader creates a ImportStatus from a Reader
@@ -139,7 +132,7 @@ func NewImportStatusListFromReader(reader io.Reader) ([]*ImportStatus, error) {
 	return status, nil
 }
 
-// Matches determines whether or not two *ImportCompletedWorkRequests
+// Matches determines whether two *ImportCompletedWorkRequests
 // point to the same logical request, in testing. Since this is for
 // testing, timestamps are ignored
 func (a *ImportCompletedWorkRequest) Matches(input interface{}) bool {
@@ -151,9 +144,9 @@ func (a *ImportCompletedWorkRequest) Matches(input interface{}) bool {
 	}
 }
 
-// String outputs a stringular representation of
+// String outputs a string representation of
 // ImportCompletedWorkRequest. It is needed to satisfy the Matcher
 // interface
-func (i *ImportCompletedWorkRequest) String() string {
-	return fmt.Sprintf("ID: %s, Error: \"%s\", CompleteAt: %d", i.ID, i.Error, i.CompleteAt)
+func (a *ImportCompletedWorkRequest) String() string {
+	return fmt.Sprintf("ID: %s, Error: \"%s\", CompleteAt: %d", a.ID, a.Error, a.CompleteAt)
 }

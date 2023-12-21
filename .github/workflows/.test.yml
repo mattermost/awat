@@ -4,7 +4,7 @@ on:
   workflow_call:
 
 jobs:
-  check-boilerplate:
+  check-style:
     runs-on: ubuntu-latest
     container:
       image: golang:1.20.0-bullseye
@@ -18,7 +18,7 @@ jobs:
         path: /go
       if: "${{ !env.ACT }}"
     - name: ci/check-code-style
-      run: make check-boilerplate
+      run: make check-style
 
   test:
     runs-on: ubuntu-latest

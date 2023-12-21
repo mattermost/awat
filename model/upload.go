@@ -8,6 +8,9 @@ import "strings"
 
 const archiveExtension = ".zip"
 
+// Upload represents the details of an upload process in the system.
+// It includes metadata like the ID, creation and completion timestamps,
+// any errors encountered, and the type of backup being uploaded.
 type Upload struct {
 	ID         string
 	CompleteAt int64

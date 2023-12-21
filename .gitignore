@@ -4,3 +4,4 @@ build/_output/
 vendor/
 /tmp
 **/.DS_Store
+bin/

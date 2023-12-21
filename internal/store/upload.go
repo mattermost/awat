@@ -14,6 +14,7 @@ import (
 
 var uploadSelect sq.SelectBuilder
 
+// UploadTableName is the name of the database table used for storing upload records.
 var UploadTableName = "Upload"
 
 func init() {

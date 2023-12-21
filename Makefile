@@ -20,12 +20,67 @@ ARCH ?= amd64
 
 GO ?= $(shell command -v go 2> /dev/null)
 
+# Binaries.
+TOOLS_BIN_DIR := $(abspath bin)
+GO_INSTALL = ./scripts/go_install.sh
+ENSURE_GOLANGCI_LINT = ./scripts/ensure_golangci-lint.sh
+
+MOCKGEN_VER := v1.4.3
+MOCKGEN_BIN := mockgen
+MOCKGEN := $(TOOLS_BIN_DIR)/$(MOCKGEN_BIN)-$(MOCKGEN_VER)
+
+OUTDATED_VER := master
+OUTDATED_BIN := go-mod-outdated
+OUTDATED_GEN := $(TOOLS_BIN_DIR)/$(OUTDATED_BIN)
+
 ################################################################################
 
+export GO111MODULE=on
 
-all: dist
 
 dist: build
+
+all: check-style dist
+
+## Runs govet and gofmt against all packages.
+.PHONY: check-style
+check-style: govet goformat
+	@echo Checking for style guide compliance
+
+## Checks if files are formatted with go fmt.
+.PHONY: goformat
+goformat:
+	@echo Checking if code is formatted
+	@for package in $(PACKAGES); do \
+		echo "Checking "$$package; \
+		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
+		if [ "$$files" ]; then \
+			gofmt_output=$$(gofmt -d -s $$files 2>&1); \
+			if [ "$$gofmt_output" ]; then \
+				echo "$$gofmt_output"; \
+				echo "gofmt failed"; \
+				echo "To fix it, run:"; \
+				echo "go fmt [FAILED_PACKAGE]"; \
+				exit 1; \
+			fi; \
+		fi; \
+	done
+	@echo "gofmt success"; \
+
+## Runs lint against all packages.
+.PHONY: lint
+lint:
+	@echo Running lint
+	env GO111MODULE=off $(GO) get -u golang.org/x/lint/golint
+	golint -set_exit_status ./...
+	@echo lint success
+
+## Runs govet against all packages.
+.PHONY: vet
+govet:
+	@echo Running govet
+	$(GO) vet ./...
+	@echo Govet success
 
 .PHONY: build
 build: ## build the AWAT
@@ -84,11 +139,6 @@ push-image:
 	@echo Push Image
 	./scripts/push-image.sh
 
-.PHONY:check-boilerplate
-push-image:
-	@echo Check boilerplate
-	./scripts/verify-boilerplate.sh
-
 .PHONY: test
 test: build
 	@echo Running tests
@@ -98,9 +148,28 @@ test: build
 test-image:
 	docker build -f test/Dockerfile -t mattermost/awat-e2e .
 
+.PHONY: check-modules
+check-modules: $(OUTDATED_GEN) ## Check outdated modules
+	@echo Checking outdated modules
+	$(GO) list -mod=mod -u -m -json all | $(OUTDATED_GEN) -update -direct
+
+.PHONY: update-modules
+update-modules: $(OUTDATED_GEN) ## Check outdated modules
+	@echo Update modules
+	$(GO) get -u ./...
+	$(GO) mod tidy
+
 .PHONY: mocks
 mocks:
-	mockgen -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go
+	$(MOCKGEN) -source ./internal/api/store.go Store -package mocks > ./internal/mocks/api/store.go
+
+.PHONY: verify-mocks
+verify-mocks: mocks
+	@if !(git diff --quiet HEAD); then \
+		git status \
+		git diff \
+		echo "generated files are out of date, run make mocks"; exit 1; \
+	fi
 
 .PHONY: e2e
 e2e: e2e-warn e2e-mattermost e2e-slack e2e-parallel
@@ -135,3 +204,13 @@ release:
 deps:
 	sudo apt update && sudo apt install hub git
 	$(GO) install k8s.io/release/cmd/release-notes@latest
+
+## --------------------------------------
+## Tooling Binaries
+## --------------------------------------
+
+$(MOCKGEN): ## Build mockgen.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/golang/mock/mockgen $(MOCKGEN_BIN) $(MOCKGEN_VER)
+
+$(OUTDATED_GEN): ## Build go-mod-outdated.
+	GOBIN=$(TOOLS_BIN_DIR) $(GO_INSTALL) github.com/psampaz/go-mod-outdated $(OUTDATED_BIN) $(OUTDATED_VER)

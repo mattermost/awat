@@ -8,6 +8,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Register sets up the routing of HTTP endpoints to their respective handler functions.
+// It associates each route with a specific handler and HTTP method in the provided router.
 func Register(rootRouter *mux.Router, context *Context) {
 	addContext := func(handler contextHandlerFunc) *contextHandler {
 		return newContextHandler(context, handler)

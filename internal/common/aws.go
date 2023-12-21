@@ -11,6 +11,8 @@ const (
 	defaultAWSClientRetries = 3
 )
 
+// NewAWSConfig creates and returns a new AWS configuration with default settings.
+// It sets the default region and specifies the maximum number of retry attempts for AWS clients.
 func NewAWSConfig() (aws.Config, error) {
 	return config.LoadDefaultConfig(
 		context.TODO(),

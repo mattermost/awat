@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TranslationTableName is the name of the database table used for storing translation data.
 const TranslationTableName = "Translation"
 
 var translationSelect sq.SelectBuilder
@@ -86,7 +87,7 @@ func (sqlStore *SQLStore) GetTranslationsByInstallation(id string) ([]*model.Tra
 	return *translations, nil
 }
 
-// GetTranslationsReadyToStart returns a batch of Translations that
+// GetTranslationReadyToStart returns a batch of Translations that
 // are ready to go, with a maximum of ten, sorted from oldest to
 // newest
 func (sqlStore *SQLStore) GetTranslationReadyToStart() (*model.Translation, error) {
@@ -173,9 +174,8 @@ func (sqlStore *SQLStore) TryLockTranslation(translation *model.Translation, own
 	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
 		if err != nil {
 			return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", translation.ID)
-		} else {
-			return errors.Errorf("wrong number of rows while trying to unlock %s", translation.ID)
 		}
+		return errors.Errorf("wrong number of rows while trying to unlock %s", translation.ID)
 	}
 	return nil
 }

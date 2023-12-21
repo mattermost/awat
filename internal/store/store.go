@@ -23,6 +23,8 @@ type SQLStore struct {
 	logger logrus.FieldLogger
 }
 
+// New creates and initializes a new SQLStore instance. It takes a database connection string (DSN)
+// and a logger instance. It returns an initialized SQLStore or an error if the connection to the database fails.
 func New(dsn string, logger *logrus.Logger) (*SQLStore, error) {
 	dbURL, err := url.Parse(dsn)
 	if err != nil {

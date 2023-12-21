@@ -6,6 +6,8 @@ package api
 
 import "github.com/mattermost/awat/model"
 
+// Store defines the interface for data storage and retrieval operations.
+// It provides methods for managing translations, imports, and uploads within the system.
 type Store interface {
 	GetTranslation(id string) (*model.Translation, error)
 	GetTranslationsByInstallation(id string) ([]*model.Translation, error)
