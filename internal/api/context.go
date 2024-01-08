@@ -30,6 +30,7 @@ type Context struct {
 	RequestID string
 }
 
+// AWS provides an interface to interact with AWS services.
 type AWS interface {
 	GetBucketName() string
 	CheckBucketFileExists(file string) (bool, error)
@@ -37,11 +38,13 @@ type AWS interface {
 	DownloadArchiveFromS3(filename string) (string, func(), error)
 }
 
+// AWSContext implements the AWS interface and provides methods to interact with AWS S3.
 type AWSContext struct {
 	s3Client *s3.Client
 	bucket   string
 }
 
+// NewAWSContext creates a new AWSContext with the specified bucket name.
 func NewAWSContext(bucket string) (*AWSContext, error) {
 	awsConfig, err := common.NewAWSConfig()
 	if err != nil {
@@ -56,10 +59,12 @@ func NewAWSContext(bucket string) (*AWSContext, error) {
 	}, nil
 }
 
+// GetBucketName returns the name of the S3 bucket used in AWSContext.
 func (a *AWSContext) GetBucketName() string {
 	return a.bucket
 }
 
+// CheckBucketFileExists checks if a file exists in the S3 bucket.
 func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
 	_, err := a.s3Client.HeadObject(context.TODO(), &s3.HeadObjectInput{
 		Bucket: aws.String(a.bucket),
@@ -82,6 +87,7 @@ func (a *AWSContext) CheckBucketFileExists(file string) (bool, error) {
 	return true, nil
 }
 
+// UploadArchiveToS3 uploads a file to an S3 bucket.
 func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error {
 	uploadFile, err := os.Open(uploadFileName)
 	if err != nil {
@@ -99,6 +105,7 @@ func (a *AWSContext) UploadArchiveToS3(uploadFileName, destKeyName string) error
 	return err
 }
 
+// DownloadArchiveFromS3 downloads a file from an S3 bucket.
 func (a *AWSContext) DownloadArchiveFromS3(archiveName string) (path string, cleanup func(), err error) {
 	tempFile, err := os.CreateTemp("", "awat-archive-")
 	if err != nil {

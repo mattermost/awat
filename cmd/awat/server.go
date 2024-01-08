@@ -69,9 +69,9 @@ var serverCmd = &cobra.Command{
 			if os.IsNotExist(err) {
 				// this message might wind up being somewhat redundant but that's alright
 				return errors.Wrapf(err, "the provided path for the working directory \"%s\" does not exist. Create it and try again?", workdir)
-			} else {
-				return errors.Wrapf(err, "failed to check status of working directory \"%s\"", workdir)
 			}
+			return errors.Wrapf(err, "failed to check status of working directory \"%s\"", workdir)
+
 		}
 
 		sqlStore, err := sqlStore(command)

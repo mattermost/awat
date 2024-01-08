@@ -87,8 +87,8 @@ func handleReceiveArchive(c *Context, w http.ResponseWriter, r *http.Request) {
 		defer os.Remove(uploadFileName)
 		if err != nil {
 			c.Logger.WithError(err).Error("failed to upload file to S3")
-			storage_err := c.Store.CompleteUpload(uploadID, err.Error())
-			if storage_err != nil {
+			storageErr := c.Store.CompleteUpload(uploadID, err.Error())
+			if storageErr != nil {
 				c.Logger.WithError(err).Errorf("failed to mark upload %s failed with error %s",
 					uploadID, err.Error())
 			}

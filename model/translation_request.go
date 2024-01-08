@@ -12,13 +12,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// BackupType defines the type of backup (e.g., Slack, Mattermost).
 type BackupType string
 
+// Backup type constants.
 const (
 	SlackWorkspaceBackupType      BackupType = "slack"
 	MattermostWorkspaceBackupType BackupType = "mattermost"
 )
 
+// TranslationRequest represents a request for translating a workspace archive.
 type TranslationRequest struct {
 	Type           BackupType
 	InstallationID string
@@ -48,18 +51,19 @@ func (request *TranslationRequest) Validate() error {
 	return nil
 }
 
+// TranslationMetadata holds metadata related to a translation.
 type TranslationMetadata struct {
 	Options interface{}
 }
 
+// TranslationStatus represents the status of a translation.
 type TranslationStatus struct {
 	Translation
 
 	State string
 }
 
-// TODO replace all these functions with a generic one after generics ship :D
-
+// NewTranslationRequestFromReader creates a TranslationRequest from an io.Reader.
 func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, error) {
 	var request TranslationRequest
 	err := json.NewDecoder(reader).Decode(&request)
@@ -75,6 +79,7 @@ func NewTranslationRequestFromReader(reader io.Reader) (*TranslationRequest, err
 	return &request, nil
 }
 
+// NewTranslationStatusFromReader creates a TranslationStatus from an io.Reader.
 func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error) {
 	var status TranslationStatus
 	err := json.NewDecoder(reader).Decode(&status)
@@ -84,6 +89,7 @@ func NewTranslationStatusFromReader(reader io.Reader) (*TranslationStatus, error
 	return &status, nil
 }
 
+// NewTranslationStatusFromBytes creates a TranslationStatus from a byte slice.
 func NewTranslationStatusFromBytes(data []byte) (*TranslationStatus, error) {
 	var status TranslationStatus
 	err := json.Unmarshal(data, &status)
@@ -93,6 +99,7 @@ func NewTranslationStatusFromBytes(data []byte) (*TranslationStatus, error) {
 	return &status, nil
 }
 
+// NewTranslationStatusListFromReader creates a list of TranslationStatus from an io.Reader.
 func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus, error) {
 	var status []*TranslationStatus
 	err := json.NewDecoder(reader).Decode(&status)
@@ -102,10 +109,12 @@ func NewTranslationStatusListFromReader(reader io.Reader) ([]*TranslationStatus,
 	return status, nil
 }
 
+// ArchiveUploadRequest represents a request to upload an archive.
 type ArchiveUploadRequest struct {
 	Type BackupType
 }
 
+// Validate checks if the ArchiveUploadRequest fields are valid.
 func (r ArchiveUploadRequest) Validate() error {
 	if r.Type != SlackWorkspaceBackupType && r.Type != MattermostWorkspaceBackupType {
 		return errors.New("invalid backup type")
@@ -114,6 +123,7 @@ func (r ArchiveUploadRequest) Validate() error {
 	return nil
 }
 
+// NewArchiveUploadFromURLQuery creates an ArchiveUploadRequest from URL query values.
 func NewArchiveUploadFromURLQuery(values url.Values) (*ArchiveUploadRequest, error) {
 	var request ArchiveUploadRequest
 

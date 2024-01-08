@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ImportTableName is the name of the database table used for storing import records.
 const ImportTableName = "Import"
 
 var importSelect sq.SelectBuilder
@@ -182,6 +183,7 @@ func (sqlStore *SQLStore) GetImportsByTranslation(id string) ([]*model.Import, e
 	return *imprts, nil
 }
 
+// GetImportsInProgress retrieves all imports that are currently in progress.
 func (sqlStore *SQLStore) GetImportsInProgress() ([]*model.Import, error) {
 	imprts := &[]*model.Import{}
 	err := sqlStore.selectBuilder(sqlStore.db, imprts,
@@ -197,6 +199,7 @@ func (sqlStore *SQLStore) GetImportsInProgress() ([]*model.Import, error) {
 
 }
 
+// GetUnlockedImportPendingWork retrieves all imports that are pending work and not locked.
 func (sqlStore *SQLStore) GetUnlockedImportPendingWork() ([]*model.Import, error) {
 	var imports []*model.Import
 	err := sqlStore.selectBuilder(sqlStore.db, &imports,
@@ -233,9 +236,8 @@ func (sqlStore *SQLStore) TryLockImport(imp *model.Import, owner string) error {
 	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
 		if err != nil {
 			return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", imp.ID)
-		} else {
-			return errors.Errorf("wrong number of rows while trying to unlock %s", imp.ID)
 		}
+		return errors.Errorf("wrong number of rows while trying to unlock %s", imp.ID)
 	}
 	return nil
 }
@@ -273,10 +275,9 @@ func (sqlStore *SQLStore) tryLockImportByProvisioner(imp *model.Import, owner st
 	}
 	if rows, err := result.RowsAffected(); rows != 1 || err != nil {
 		if err != nil {
-			return errors.Wrapf(err, "wrong number of rows while trying to lock %s", imp.ID)
-		} else {
-			return errors.Errorf("wrong number of rows while trying to lock %s", imp.ID)
+			return errors.Wrapf(err, "wrong number of rows while trying to unlock %s", imp.ID)
 		}
+		return errors.Errorf("wrong number of rows while trying to unlock %s", imp.ID)
 	}
 	return nil
 }

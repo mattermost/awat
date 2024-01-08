@@ -24,6 +24,7 @@ type Client struct {
 	httpClient *http.Client
 }
 
+// NewClient creates a new instance of Client.
 func NewClient(address string) *Client {
 	return &Client{
 		address:    address,
@@ -57,8 +58,8 @@ func (c *Client) CreateTranslation(translationRequest *TranslationRequest) (*Tra
 
 // GetTranslationStatus returns the TranslationStatus struct returned
 // from the API for the given Translation ID
-func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus, error) {
-	resp, err := c.doGet(c.buildURL("/translation/%s", translationId))
+func (c *Client) GetTranslationStatus(translationID string) (*TranslationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/translation/%s", translationID))
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +76,8 @@ func (c *Client) GetTranslationStatus(translationId string) (*TranslationStatus,
 
 // GetTranslationStatusesByInstallation returns all Translations that
 // pertain to an Installation
-func (c *Client) GetTranslationStatusesByInstallation(installationId string) ([]*TranslationStatus, error) {
-	resp, err := c.doGet(c.buildURL("/installation/translation/%s", installationId))
+func (c *Client) GetTranslationStatusesByInstallation(installationID string) ([]*TranslationStatus, error) {
+	resp, err := c.doGet(c.buildURL("/installation/translation/%s", installationID))
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +112,7 @@ func (c *Client) GetImportStatusesByInstallation(installationID string) ([]*Impo
 	}
 }
 
+// GetImportStatusesByTranslation retrieves all import statuses related to a translation.
 func (c *Client) GetImportStatusesByTranslation(translationID string) ([]*ImportStatus, error) {
 	resp, err := c.doGet(c.buildURL("/translation/%s/import", translationID))
 	if err != nil {
@@ -187,7 +189,7 @@ func (c *Client) GetTranslationReadyToImport(request *ImportWorkRequest) (*Impor
 	}
 }
 
-// CompleteImport marks an Import as finished, with or without an error
+// ReleaseLockOnImport marks an Import as finished, with or without an error
 func (c *Client) ReleaseLockOnImport(importID string) error {
 	resp, err := c.doGet(c.buildURL("/import/%s/release", importID))
 	if err != nil {
@@ -249,6 +251,7 @@ func closeBody(r *http.Response) {
 	}
 }
 
+// buildURL builds a complete URL from a path and arguments.
 func (c *Client) buildURL(urlPath string, args ...interface{}) string {
 	return fmt.Sprintf("%s%s", c.address, fmt.Sprintf(urlPath, args...))
 }
@@ -387,6 +390,7 @@ func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
 	return false, nil
 }
 
+// WaitForUploadToComplete waits for an upload to complete on the AWAT server.
 func (c *Client) WaitForUploadToComplete(uploadID string) error {
 	logger := log.New()
 

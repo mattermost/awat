@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// ImportSupervisor is responsible for supervising the import process.
+// It manages the import lifecycle and communicates with other services like AWS and Mattermost Cloud.
 type ImportSupervisor struct {
 	id             string
 	logger         log.FieldLogger
@@ -27,6 +29,7 @@ type ImportSupervisor struct {
 	keepImportData bool
 }
 
+// importStore defines the interface for interacting with the import storage.
 type importStore interface {
 	GetUnlockedImportPendingWork() ([]*model.Import, error)
 	GetTranslation(id string) (*model.Translation, error)
@@ -35,6 +38,8 @@ type importStore interface {
 	UnlockImport(imp *model.Import) error
 }
 
+// NewImportSupervisor creates a new ImportSupervisor instance.
+// It initializes the supervisor with provided parameters including the import store, logger, cloud client, etc.
 func NewImportSupervisor(store importStore, logger log.FieldLogger, cloudClient *cloud.Client, bucket string, keepImportData bool) *ImportSupervisor {
 	id := model.NewID()
 	return &ImportSupervisor{
@@ -47,6 +52,8 @@ func NewImportSupervisor(store importStore, logger log.FieldLogger, cloudClient 
 	}
 }
 
+// Start begins the import supervision process.
+// It regularly checks for new import tasks and processes them accordingly.
 func (s *ImportSupervisor) Start() {
 	s.logger.Info("Import supervisor started")
 
@@ -57,6 +64,8 @@ func (s *ImportSupervisor) Start() {
 	}
 }
 
+// do performs a single supervision iteration.
+// It fetches pending import tasks and processes each one.
 func (s *ImportSupervisor) do() {
 	imports, err := s.store.GetUnlockedImportPendingWork()
 	if err != nil {
@@ -68,6 +77,8 @@ func (s *ImportSupervisor) do() {
 	}
 }
 
+// supervise handles the supervision of a single import task.
+// It involves locking the import, checking its state, and processing it based on its current state.
 func (s *ImportSupervisor) supervise(imp *model.Import) {
 	logger := s.logger.WithFields(log.Fields{
 		"import": imp.ID,
@@ -129,6 +140,8 @@ func (s *ImportSupervisor) supervise(imp *model.Import) {
 	}
 }
 
+// transitionImport manages the state transition of an import.
+// Depending on the current state of the import and the associated installation, it moves the import to the next state.
 func (s *ImportSupervisor) transitionImport(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	switch imp.State {
 	case model.ImportStateRequested:
@@ -146,6 +159,8 @@ func (s *ImportSupervisor) transitionImport(imp *model.Import, installation *clo
 	return imp.State
 }
 
+// transitionImportRequested handles the transition for an import in the 'requested' state.
+// It checks the installation's readiness and prepares it for the import process.
 func (s *ImportSupervisor) transitionImportRequested(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 
 	if installation.State != cloud.InstallationStateStable {
@@ -189,6 +204,8 @@ func (s *ImportSupervisor) transitionImportRequested(imp *model.Import, installa
 	return model.ImportStateInstallationPreAdjustment
 }
 
+// transitionImportInstallationPreAdjustment handles the transition for an import in the 'pre-adjustment' state.
+// It waits for the installation to become stable after initial adjustments.
 func (s *ImportSupervisor) transitionImportInstallationPreAdjustment(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	if installation.State != cloud.InstallationStateStable {
 		logger.Debug("Waiting for installation to be stable")
@@ -213,6 +230,8 @@ func (s *ImportSupervisor) transitionImportInstallationPreAdjustment(imp *model.
 	return model.ImportStateInProgress
 }
 
+// transitionImportInProgress handles the transition for an import in the 'in-progress' state.
+// It monitors the import process and updates the state once the import is complete.
 func (s *ImportSupervisor) transitionImportInProgress(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	if !startedImportIsComplete(installation) {
 		logger.Debug("Import is still running")
@@ -258,6 +277,8 @@ func (s *ImportSupervisor) transitionImportInProgress(imp *model.Import, install
 	return model.ImportStateComplete
 }
 
+// transitionImportComplete handles the transition for an import in the 'complete' state.
+// It performs final adjustments and cleanup after the import is done.
 func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	if installation.State != cloud.InstallationStateStable {
 		logger.Debug("Waiting for installation to be stable")
@@ -305,6 +326,8 @@ func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installat
 	return model.ImportStateInstallationPostAdjustment
 }
 
+// transitionImportInstallationPostAdjustment handles the transition for an import in the 'post-adjustment' state.
+// It ensures the installation returns to its normal state after the import.
 func (s *ImportSupervisor) transitionImportInstallationPostAdjustment(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	if installation.State != cloud.InstallationStateStable {
 		logger.Debug("Waiting for installation to be stable")
