@@ -1,6 +1,6 @@
 # Copyright (c) 2020-present Mattermost, Inc. All Rights Reserved.
 # See LICENSE.txt for license information.
-ARG DOCKER_BUILD_IMAGE=golang:1.21
+ARG DOCKER_BUILD_IMAGE=golang:1.20
 ARG DOCKER_BASE_IMAGE=alpine:3.19
 
 FROM ${DOCKER_BUILD_IMAGE} AS build
@@ -29,7 +29,7 @@ LABEL name="Mattermost Cloud Automatic Workspace Archive Translator" \
   io.k8s.description="Mattermost Cloud AWAT converts workspace archives into a Mattermost-native import format" \
   io.k8s.display-name="Mattermost Cloud AWAT"
 
-COPY --from=build /awat/cmd/awat /usr/local/bin/awat
+COPY --from=build /awat/build/_output/bin/awat /usr/local/bin/awat
 
 USER ${USER_UID}
 

@@ -6,7 +6,7 @@
 ################################################################################
 
 ## Docker Build Versions
-DOCKER_BUILD_IMAGE = golang:1.21
+DOCKER_BUILD_IMAGE = golang:1.20
 DOCKER_BASE_IMAGE = alpine:3.19
 
 ################################################################################
@@ -95,7 +95,7 @@ build: ## build the AWAT
 		echo "Unknown architecture $(ARCH)"; \
 		exit 1; \
 	fi; \
-	GOOS=linux CGO_ENABLED=0 $(GO) build -buildvcs=false -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o build/_output/bin/awat-$$GOARCH  ./cmd/awat
+	GOOS=linux CGO_ENABLED=0 $(GO) build -buildvcs=false -ldflags '$(LDFLAGS)' -gcflags all=-trimpath=$(PWD) -asmflags all=-trimpath=$(PWD) -a -installsuffix cgo -o ./build/_output/bin/awat  ./cmd/awat
 
 .PHONY: build-image
 build-image:   ## Build the docker image for the AWAT
