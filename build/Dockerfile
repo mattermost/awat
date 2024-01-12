@@ -29,7 +29,7 @@ LABEL name="Mattermost Cloud Automatic Workspace Archive Translator" \
   io.k8s.description="Mattermost Cloud AWAT converts workspace archives into a Mattermost-native import format" \
   io.k8s.display-name="Mattermost Cloud AWAT"
 
-COPY --from=build /awat/cmd/awat /usr/local/bin/awat
+COPY --from=build /awat/build/_output/awat /usr/local/bin/awat
 
 USER ${USER_UID}
 
