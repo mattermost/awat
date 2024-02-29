@@ -17,6 +17,7 @@ func Register(rootRouter *mux.Router, context *Context) {
 
 	rootRouter.Handle("/upload", addContext(handleReceiveArchive)).Methods("POST")
 	rootRouter.Handle("/upload/{id}", addContext(handleCheckUploadStatus)).Methods("GET")
+	rootRouter.Handle("/uploads", addContext(handleListUploads)).Methods("GET")
 
 	rootRouter.Handle("/translate", addContext(handleStartTranslation)).Methods("POST")
 	rootRouter.Handle("/translation/{id}", addContext(handleGetTranslationStatus)).Methods("GET")

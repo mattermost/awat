@@ -113,7 +113,7 @@ func (s *TranslationSupervisor) supervise() {
 
 	// Only validate if the origin is not a mattermost type, since we validate those on the API calls
 	if translation.Type != model.MattermostWorkspaceBackupType {
-		logger.Info("Valiating translation result")
+		logger.Info("Validating translation result")
 		// Validate the translation before considering it "importable"
 		validator, err := validators.NewValidator(model.MattermostWorkspaceBackupType)
 		if err != nil {
@@ -133,7 +133,7 @@ func (s *TranslationSupervisor) supervise() {
 			}
 		}
 	} else {
-		logger.Debug("avoiding validation since input already was a mattermost archive, assuming already validated")
+		logger.Debug("Skipping validation since input already was a mattermost archive, assuming already validated")
 	}
 
 	importResource := fmt.Sprintf("%s/%s", s.bucket, output)

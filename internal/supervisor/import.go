@@ -171,7 +171,7 @@ func (s *ImportSupervisor) transitionImportRequested(imp *model.Import, installa
 	var adjustmentRequired bool
 	size := installation.Size
 	if size != model.Size1000String {
-		logger.Infof("Resizing installation to %s\n", model.Size1000String)
+		logger.Infof("Resizing installation to %s", model.Size1000String)
 		size = model.Size1000String
 		adjustmentRequired = true
 	}
@@ -290,7 +290,7 @@ func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installat
 	var adjustmentRequired bool
 	size := installation.Size
 	if size == model.Size1000String {
-		logger.Infof("Resizing installation to %s\n", model.SizeCloud10Users)
+		logger.Infof("Resizing installation to %s", model.SizeCloud10Users)
 		size = model.SizeCloud10Users
 		adjustmentRequired = true
 	}
@@ -323,6 +323,7 @@ func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installat
 		logger.WithError(err).Error("Failed to update installation")
 		return imp.State
 	}
+
 	return model.ImportStateInstallationPostAdjustment
 }
 

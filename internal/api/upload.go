@@ -140,3 +140,17 @@ func handleCheckUploadStatus(c *Context, w http.ResponseWriter, r *http.Request)
 		return
 	}
 }
+
+// handleListUploads returns all updloads in the database. Responds to GET /translations
+func handleListUploads(c *Context, w http.ResponseWriter, r *http.Request) {
+	uploads, err := c.Store.GetUploads()
+	if err != nil {
+		c.Logger.WithError(err).Error("failed to fetch uploads")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	outputJSON(c, w, uploads)
+}
