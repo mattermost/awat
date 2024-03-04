@@ -4,7 +4,13 @@
 
 package model
 
-import "strings"
+import (
+	"encoding/json"
+	"io"
+	"strings"
+
+	"github.com/pkg/errors"
+)
 
 const archiveExtension = ".zip"
 
@@ -17,6 +23,26 @@ type Upload struct {
 	CreateAt   int64
 	Error      string
 	Type       BackupType
+}
+
+// NewUploadFromReader creates an Upload from a Reader.
+func NewUploadFromReader(reader io.Reader) (*Upload, error) {
+	var upload Upload
+	err := json.NewDecoder(reader).Decode(&upload)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode upload")
+	}
+	return &upload, nil
+}
+
+// NewUploadListFromReader creates a list of uploads from a Reader.
+func NewUploadListFromReader(reader io.Reader) ([]*Upload, error) {
+	var uploads []*Upload
+	err := json.NewDecoder(reader).Decode(&uploads)
+	if err != nil && err != io.EOF {
+		return nil, errors.Wrap(err, "failed to decode upload list")
+	}
+	return uploads, nil
 }
 
 // TrimExtensionFromArchiveFilename returns the archive filename without the extension, mostly to

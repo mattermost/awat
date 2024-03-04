@@ -24,6 +24,7 @@ type Translation struct {
 	ID             string
 	InstallationID string
 	Resource       string
+	UploadID       *string
 	Type           BackupType
 	Team           string
 	Users          int
@@ -31,7 +32,6 @@ type Translation struct {
 	StartAt        int64
 	CompleteAt     int64
 	LockedBy       string
-	UploadID       *string
 }
 
 // State provides a container for returning the state with the

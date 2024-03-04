@@ -315,6 +315,40 @@ func (c *Client) doDelete(u string) (*http.Response, error) {
 	return c.httpClient.Do(req)
 }
 
+// GetUpload returns the Upload with the given ID.
+func (c *Client) GetUpload(uploadID string) (*Upload, error) {
+	resp, err := c.doGet(c.buildURL("/upload/%s", uploadID))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return nil, nil
+	case http.StatusOK:
+		return NewUploadFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
+// GetUploads returns all uploads from the AWAT.
+func (c *Client) GetUploads() ([]*Upload, error) {
+	resp, err := c.doGet(c.buildURL("/uploads"))
+	if err != nil {
+		return nil, err
+	}
+	defer closeBody(resp)
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		return NewUploadListFromReader(resp.Body)
+	default:
+		return nil, errors.Errorf("failed with status code %d", resp.StatusCode)
+	}
+}
+
 // UploadArchiveForTranslation uploads the file specified as an argument to S3 via the AWAT
 func (c *Client) UploadArchiveForTranslation(filename string, archiveType BackupType) (string, error) {
 	inputFile, err := os.Open(filename)

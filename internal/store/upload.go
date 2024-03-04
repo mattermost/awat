@@ -46,6 +46,16 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	return upload, nil
 }
 
+func (sqlStore *SQLStore) GetUploads() ([]*model.Upload, error) {
+	uploads := &[]*model.Upload{}
+	err := sqlStore.selectBuilder(sqlStore.db, uploads, uploadSelect)
+	if err != nil {
+		return nil, err
+	}
+
+	return *uploads, nil
+}
+
 // CreateUpload creates an upload object in the database to represent a
 // started upload
 func (sqlStore *SQLStore) CreateUpload(id string, archiveType model.BackupType) error {

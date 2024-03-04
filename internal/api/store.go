@@ -24,6 +24,7 @@ type Store interface {
 	UpdateImport(imp *model.Import) error
 
 	GetUpload(id string) (*model.Upload, error)
+	GetUploads() ([]*model.Upload, error)
 	CreateUpload(id string, archiveType model.BackupType) error
 	CompleteUpload(uploadID, errorMessage string) error
 }
