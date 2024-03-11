@@ -22,6 +22,7 @@ const (
 	teamFlag            = "team"
 	translationTypeFlag = "type"
 	uploadFile          = "upload"
+	validateArchive     = "validate"
 )
 
 func init() {
@@ -33,8 +34,8 @@ func init() {
 	startTranslationCmd.PersistentFlags().String(archiveFilename, "", "The name of the file holding the input for the translation, assumed to be stored in the root of the S3 bucket")
 	startTranslationCmd.PersistentFlags().String(teamFlag, "", "The Team in Mattermost which is the intended destination of the import")
 	startTranslationCmd.PersistentFlags().String(translationTypeFlag, string(model.SlackWorkspaceBackupType), "The type of backup being translated & imported (default: slack; valid options: mattermost, slack)")
-
 	startTranslationCmd.PersistentFlags().Bool(uploadFile, false, "Whether or not to upload the file provided before proceeding")
+	startTranslationCmd.PersistentFlags().Bool(validateArchive, true, "Whether or not to validate the archive file provided before proceeding")
 
 	translationCmd.AddCommand(getTranslationCmd)
 	translationCmd.AddCommand(listTranslationCmd)
@@ -143,6 +144,7 @@ var startTranslationCmd = &cobra.Command{
 		if archive == "" {
 			return errors.New("the archive filename to which this translation pertains must be specified")
 		}
+		validate, _ := cmd.Flags().GetBool(validateArchive)
 
 		var err error
 		var uploadID *string
@@ -163,11 +165,12 @@ var startTranslationCmd = &cobra.Command{
 		var status *model.TranslationStatus
 		status, err = awat.CreateTranslation(
 			&model.TranslationRequest{
-				Type:           translationType,
-				InstallationID: installation,
-				Archive:        archive,
-				UploadID:       uploadID,
-				Team:           team,
+				Type:            translationType,
+				InstallationID:  installation,
+				Archive:         archive,
+				UploadID:        uploadID,
+				Team:            team,
+				ValidateArchive: validate,
 			})
 
 		if status != nil {

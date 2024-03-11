@@ -23,11 +23,12 @@ const (
 
 // TranslationRequest represents a request for translating a workspace archive.
 type TranslationRequest struct {
-	Type           BackupType
-	InstallationID string
-	Archive        string
-	Team           string
-	UploadID       *string
+	Type            BackupType
+	InstallationID  string
+	Archive         string
+	Team            string
+	UploadID        *string
+	ValidateArchive bool
 }
 
 // Validate validates the values of a translation create request.
