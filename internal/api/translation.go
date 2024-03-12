@@ -42,15 +42,21 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	logger := c.Logger.WithFields(logrus.Fields{
+		"backupType":   translationRequest.Type,
+		"archive":      translationRequest.Archive,
+		"installation": translationRequest.InstallationID,
+	})
+
 	translation := model.NewTranslationFromRequest(translationRequest)
 	exists, err := c.AWS.CheckBucketFileExists(translation.Resource)
 	if err != nil {
-		c.Logger.WithError(err).Error("failed to check if bucket and file exist")
+		logger.WithError(err).Error("failed to check if bucket and file exist")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	if !exists {
-		c.Logger.Warnf("resource %s does not exist in bucket %s", translation.Resource, c.AWS.GetBucketName())
+		logger.Warnf("resource %s does not exist in bucket %s", translation.Resource, c.AWS.GetBucketName())
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -61,36 +67,44 @@ func handleStartTranslation(c *Context, w http.ResponseWriter, r *http.Request) 
 		// We purposely only verify Mattermost archives since the Slack Validator is a no-op, so we avoid
 		// unnecessary downloads this way.
 		if translationRequest.Type == model.MattermostWorkspaceBackupType {
-			c.Logger.WithField("archive", translationRequest.Archive).Info("Downloading archive for validation")
-			validator, err := validators.NewValidator(translationRequest.Type)
-			if err != nil {
-				c.Logger.WithError(err).Error("error getting validator")
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
+			if !translationRequest.ValidateArchive {
+				logger.Info("Skipping archive validation")
+			} else {
+				logger.Info("Downloading archive for validation")
+				validator, err := validators.NewValidator(translationRequest.Type)
+				if err != nil {
+					logger.WithError(err).Error("error getting validator")
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
 
-			archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
-			if err != nil {
-				c.Logger.WithError(err).Error("error downloading archive for validation")
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte(err.Error()))
-				return
-			}
-			defer cleanup()
-			c.Logger.WithFields(logrus.Fields{"archive": translationRequest.Archive, "archivePath": archivePath}).Debug("Downloaded archive for validation")
+				archivePath, cleanup, err := c.AWS.DownloadArchiveFromS3(translationRequest.Archive)
+				if err != nil {
+					logger.WithError(err).Error("error downloading archive for validation")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(err.Error()))
+					return
+				}
+				defer cleanup()
 
-			if err := validator.Validate(archivePath); err != nil {
-				c.Logger.WithError(err).Error("archive validation failed")
-				w.WriteHeader(http.StatusBadRequest)
-				_, _ = w.Write([]byte(err.Error()))
-				return
+				logger = logger.WithField("archivePath", archivePath)
+				logger.Debug("Downloaded archive for validation")
+
+				if err := validator.Validate(archivePath); err != nil {
+					logger.WithError(err).Error("archive validation failed")
+					w.WriteHeader(http.StatusBadRequest)
+					_, _ = w.Write([]byte(err.Error()))
+					return
+				}
+
+				logger.Info("Archive validation successful")
 			}
 		}
 
 		// Since we are checking a potentially manually or externally uploaded archive, store the result inside the
 		// uploads table so we can reference it later
 		if err := c.Store.CreateUpload(model.TrimExtensionFromArchiveFilename(translationRequest.Archive), translationRequest.Type); err != nil {
-			c.Logger.WithError(err).Error("error storing upload in database")
+			logger.WithError(err).Error("error storing upload in database")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
