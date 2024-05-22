@@ -50,7 +50,15 @@ func TransformSlack(translation *model.Translation, inputFilePath, outputFilePat
 		return err
 	}
 
-	err = slackTransformer.Transform(slackExport, attachmentsDir, false, true, false)
+	err = slackTransformer.Transform(
+		slackExport,
+		attachmentsDir,
+		false, // skip attachments
+		true,  // discard invalid props
+		true,  // allow downloads
+		true,  // skip empty email
+		"",    // default email domain
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to transform slack export")
 	}

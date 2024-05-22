@@ -59,7 +59,7 @@ func TestTransformSlack(t *testing.T) {
 	found := false
 	// find a known line of output just to make sure things went more or less okay
 	for _, l := range lines {
-		if strings.HasPrefix(l, `{"type":"post","post":{"team":"some team","channel":"testingsomemoreee","user":"jason_24","type":null,"message":"@jasonbot","props":null,`) {
+		if strings.HasPrefix(l, `{"type":"post","post":{"team":"some team","channel":"leads","user":"james","type":"","message":"@jasonbot","props":null,"create_at":1539794482000,"edit_at":null,"replies":[],"attachments":[]}}`) {
 			found = true
 		}
 	}
