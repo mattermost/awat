@@ -222,7 +222,7 @@ release:
 
 .PHONY: deps
 deps:
-	apt update && apt install hub git
+	apt update && apt -y install hub
 	$(GO) install k8s.io/release/cmd/release-notes@latest
 
 ## --------------------------------------
