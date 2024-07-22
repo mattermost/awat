@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -176,23 +177,7 @@ func (s *ImportSupervisor) transitionImportRequested(imp *model.Import, installa
 
 	logger.Info("Adjusting installation configuration")
 
-	var err error
-	if installation.APISecurityLock {
-		err = s.cloud.UnlockAPIForInstallation(installation.ID)
-		if err != nil {
-			logger.WithError(err).Error("Failed to unlock installation")
-			return imp.State
-		}
-
-		defer func() {
-			err = s.cloud.LockAPIForInstallation(installation.ID)
-			if err != nil {
-				logger.WithError(err).Error("Failed to relock installation")
-			}
-		}()
-	}
-
-	_, err = s.cloud.UpdateInstallation(installation.ID, patch)
+	err := s.handleInstallationUpdate(installation, patch, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to update installation")
 		return imp.State
@@ -294,23 +279,7 @@ func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installat
 
 	logger.Info("Adjusting installation configuration")
 
-	var err error
-	if installation.APISecurityLock {
-		err = s.cloud.UnlockAPIForInstallation(installation.ID)
-		if err != nil {
-			logger.WithError(err).Error("Failed to unlock installation")
-			return imp.State
-		}
-
-		defer func() {
-			err = s.cloud.LockAPIForInstallation(installation.ID)
-			if err != nil {
-				logger.WithError(err).Error("Failed to relock installation")
-			}
-		}()
-	}
-
-	_, err = s.cloud.UpdateInstallation(installation.ID, patch)
+	err := s.handleInstallationUpdate(installation, patch, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to update installation")
 		return imp.State
@@ -428,4 +397,28 @@ func getPostImportPatch(installation *cloud.Installation, logger log.FieldLogger
 	}
 
 	return patch
+}
+
+func (s *ImportSupervisor) handleInstallationUpdate(installation *cloud.InstallationDTO, patch *cloud.PatchInstallationRequest, logger log.FieldLogger) error {
+	var err error
+	if installation.APISecurityLock {
+		err = s.cloud.UnlockAPIForInstallation(installation.ID)
+		if err != nil {
+			return errors.Wrap(err, "Failed to unlock installation")
+		}
+
+		defer func() {
+			err = s.cloud.LockAPIForInstallation(installation.ID)
+			if err != nil {
+				logger.WithError(err).Error("Failed to relock installation")
+			}
+		}()
+	}
+
+	_, err = s.cloud.UpdateInstallation(installation.ID, patch)
+	if err != nil {
+		return errors.Wrap(err, "Failed to update installation")
+	}
+
+	return nil
 }
