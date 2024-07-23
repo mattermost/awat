@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/mattermost/awat/model"
 	cloud "github.com/mattermost/mattermost-cloud/model"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -162,45 +163,26 @@ func (s *ImportSupervisor) transitionImport(imp *model.Import, installation *clo
 // transitionImportRequested handles the transition for an import in the 'requested' state.
 // It checks the installation's readiness and prepares it for the import process.
 func (s *ImportSupervisor) transitionImportRequested(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
-
 	if installation.State != cloud.InstallationStateStable {
 		logger.Debug("Waiting for installation to be stable")
 		return imp.State
 	}
 
-	var adjustmentRequired bool
-	size := installation.Size
-	if size != model.Size1000String {
-		logger.Infof("Resizing installation to %s", model.Size1000String)
-		size = model.Size1000String
-		adjustmentRequired = true
-	}
-
-	s3TimeoutEnv := installation.PriorityEnv[model.S3EnvKey]
-	if s3TimeoutEnv.Value != fmt.Sprintf("%d", model.S3ExtendedTimeout) {
-		logger.Info("Extending S3 timeout to 48 hours")
-		s3TimeoutEnv.Value = fmt.Sprintf("%d", model.S3ExtendedTimeout)
-		adjustmentRequired = true
-	}
-
-	if !adjustmentRequired {
-		logger.Info("No adjustments required")
+	logger.Info("Running pre-import installation configuration check")
+	patch := getPreImportPatch(installation.Installation, logger)
+	if patch == nil {
+		logger.Info("No installation adjustments required")
 		return model.ImportStateInProgress
 	}
 
-	logger.Info("Adjustments required")
-	patchInstallation := &cloud.PatchInstallationRequest{
-		Size: &size,
-		PriorityEnv: cloud.EnvVarMap{
-			model.S3EnvKey: s3TimeoutEnv,
-		},
-	}
+	logger.Info("Adjusting installation configuration")
 
-	_, err := s.cloud.UpdateInstallation(installation.ID, patchInstallation)
+	err := s.handleInstallationUpdate(installation, patch, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to update installation")
 		return imp.State
 	}
+
 	return model.ImportStateInstallationPreAdjustment
 }
 
@@ -277,48 +259,27 @@ func (s *ImportSupervisor) transitionImportInProgress(imp *model.Import, install
 	return model.ImportStateComplete
 }
 
-// transitionImportComplete handles the transition for an import in the 'complete' state.
-// It performs final adjustments and cleanup after the import is done.
+// transitionImportComplete handles the transition for an import in the 'complete'
+// state. It performs final adjustments and cleanup after the import is done.
 func (s *ImportSupervisor) transitionImportComplete(imp *model.Import, installation *cloud.InstallationDTO, logger log.FieldLogger) string {
 	if installation.State != cloud.InstallationStateStable {
 		logger.Debug("Waiting for installation to be stable")
 		return imp.State
 	}
 
-	logger.Debug("Installation is Stable")
-
-	var adjustmentRequired bool
-	size := installation.Size
-	if size == model.Size1000String {
-		logger.Infof("Resizing installation to %s", model.SizeCloud10Users)
-		size = model.SizeCloud10Users
-		adjustmentRequired = true
-	}
-
-	s3TimeoutEnv := installation.PriorityEnv[model.S3EnvKey]
-	if s3TimeoutEnv.Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) {
-		logger.Info("Setting S3 timeout back to the default value")
-		s3TimeoutEnv.Value = fmt.Sprintf("%d", model.S3DefaultTimeout)
-		adjustmentRequired = true
-	}
-
-	if !adjustmentRequired {
-		logger.Info("No adjustments required")
+	logger.Info("Running post-import installation configuration check")
+	patch := getPostImportPatch(installation.Installation, logger)
+	if patch == nil {
+		logger.Info("No installation adjustments required")
 		if imp.Error != "" {
 			return model.ImportStateFailed
 		}
 		return model.ImportStateSucceeded
 	}
 
-	logger.Info("Adjustments required")
-	patchInstallation := &cloud.PatchInstallationRequest{
-		Size: &size,
-		PriorityEnv: cloud.EnvVarMap{
-			model.S3EnvKey: s3TimeoutEnv,
-		},
-	}
+	logger.Info("Adjusting installation configuration")
 
-	_, err := s.cloud.UpdateInstallation(installation.ID, patchInstallation)
+	err := s.handleInstallationUpdate(installation, patch, logger)
 	if err != nil {
 		logger.WithError(err).Error("Failed to update installation")
 		return imp.State
@@ -338,17 +299,16 @@ func (s *ImportSupervisor) transitionImportInstallationPostAdjustment(imp *model
 	logger.Debug("Installation is Stable")
 
 	if installation.Size == model.Size1000String {
-		logger.Debug("Installation is not in the correct size")
+		logger.Warn("Installation is not in the correct size")
 		return model.ImportStateComplete
 	}
 
-	s3TimeoutEnv := installation.PriorityEnv[model.S3EnvKey]
-	if s3TimeoutEnv.Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) {
-		logger.Debug("S3 timeout is not extended")
+	if installation.PriorityEnv[model.S3EnvKey].Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) {
+		logger.Warn("S3 timeout is still extended")
 		return model.ImportStateComplete
 	}
 
-	logger.Info("Installation is in the correct size and S3 timeout is extended")
+	logger.Info("Installation has been reverted to default configuration")
 
 	if imp.Error != "" {
 		return model.ImportStateFailed
@@ -371,4 +331,94 @@ func startedImportIsComplete(installation *cloud.InstallationDTO) bool {
 		return false
 	}
 	return true
+}
+
+func getPreImportPatch(installation *cloud.Installation, logger log.FieldLogger) *cloud.PatchInstallationRequest {
+	var adjustmentRequired bool
+	patch := &cloud.PatchInstallationRequest{}
+
+	importSize := model.Size1000String
+	if installation.Size != importSize {
+		logger.Debugf("Resizing installation to %s", importSize)
+		patch.Size = &importSize
+		adjustmentRequired = true
+	}
+
+	// For the S3 timeout we need to look at both the priority and normal env
+	// vars for the installation to see if either is set.
+	installationS3TimeoutEnvValue := installation.PriorityEnv[model.S3EnvKey].Value
+	if installationS3TimeoutEnvValue == "" {
+		installationS3TimeoutEnvValue = installation.MattermostEnv[model.S3EnvKey].Value
+	}
+
+	importS3TimeoutString := fmt.Sprintf("%d", model.S3ExtendedTimeout)
+	if installationS3TimeoutEnvValue != importS3TimeoutString {
+		logger.Debugf("Extending S3 timeout to 48 hours")
+		patch.PriorityEnv = cloud.EnvVarMap{
+			model.S3EnvKey: cloud.EnvVar{Value: importS3TimeoutString},
+		}
+		adjustmentRequired = true
+	}
+
+	if !adjustmentRequired {
+		return nil
+	}
+
+	return patch
+}
+
+func getPostImportPatch(installation *cloud.Installation, logger log.FieldLogger) *cloud.PatchInstallationRequest {
+	var adjustmentRequired bool
+	patch := &cloud.PatchInstallationRequest{}
+
+	defaultSize := model.SizeCloud10Users
+	if installation.Size == model.Size1000String {
+		logger.Debugf("Resizing installation to %s", defaultSize)
+		patch.Size = &defaultSize
+		adjustmentRequired = true
+	}
+
+	if installation.PriorityEnv[model.S3EnvKey].Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) {
+		// NOTE: We want to clear the priority env var instead of setting it to
+		// a default value so that standard group environment variables are not
+		// ignored on the installation. Clearing the priority env vars will
+		// remove other custom env vars that were set. In order to not add extra
+		// complexity that would be needed to see if other custom env vars need
+		// to be re-applied as a follow-up step, we will assume that clearing
+		// everything is okay. Installations receiving imports should always be
+		// newly-created so it's unlikely they should have overrides.
+		logger.Debug("Clearing all priority env to remove S3 timeout increase")
+		patch.PriorityEnv = cloud.EnvVarMap{}
+		adjustmentRequired = true
+	}
+
+	if !adjustmentRequired {
+		return nil
+	}
+
+	return patch
+}
+
+func (s *ImportSupervisor) handleInstallationUpdate(installation *cloud.InstallationDTO, patch *cloud.PatchInstallationRequest, logger log.FieldLogger) error {
+	var err error
+	if installation.APISecurityLock {
+		err = s.cloud.UnlockAPIForInstallation(installation.ID)
+		if err != nil {
+			return errors.Wrap(err, "Failed to unlock installation")
+		}
+
+		defer func() {
+			err = s.cloud.LockAPIForInstallation(installation.ID)
+			if err != nil {
+				logger.WithError(err).Error("Failed to relock installation")
+			}
+		}()
+	}
+
+	_, err = s.cloud.UpdateInstallation(installation.ID, patch)
+	if err != nil {
+		return errors.Wrap(err, "Failed to update installation")
+	}
+
+	return nil
 }
