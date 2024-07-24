@@ -97,8 +97,9 @@ func TestTranslations(t *testing.T) {
 
 	t.Run("start a new translation", func(t *testing.T) {
 		gomock.InOrder(
+			store.EXPECT().GetUpload("foo").Return(nil, nil).Times(1),
 			store.EXPECT().CreateUpload(
-				gomock.Any(),
+				"foo",
 				model.SlackWorkspaceBackupType,
 			).Return(nil).Times(1),
 			store.EXPECT().
@@ -130,7 +131,10 @@ func TestTranslations(t *testing.T) {
 
 	t.Run("start a new translation just uploaded", func(t *testing.T) {
 		gomock.InOrder(
-			// Missing upload, since UploadID was provided
+			store.EXPECT().GetUpload("foo").Return(
+				&model.Upload{
+					ID: "foo",
+				}, nil).Times(1),
 			store.EXPECT().
 				CreateTranslation(
 					// a more specific expectation could be applied here, but it

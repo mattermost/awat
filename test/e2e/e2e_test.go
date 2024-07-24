@@ -725,7 +725,6 @@ func retryFor(t *testing.T, d time.Duration, doer func() bool) {
 }
 
 func deleteS3Object(bucket, key string) error {
-
 	awsConfig, err := common.NewAWSConfig()
 	if err != nil {
 		return err
