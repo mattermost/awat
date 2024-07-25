@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/mattermost/awat/model"
@@ -25,7 +24,6 @@ type ImportSupervisor struct {
 	logger         log.FieldLogger
 	store          importStore
 	cloud          *cloud.Client
-	awsConfig      *aws.Config
 	bucket         string
 	keepImportData bool
 }

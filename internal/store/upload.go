@@ -28,8 +28,7 @@ func init() {
 		From(UploadTableName)
 }
 
-// GetUpload will fetch the metadata about an upload from the database
-// by ID
+// GetUpload will fetch the metadata about an upload from the database by ID.
 func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	upload := new(model.Upload)
 
@@ -46,6 +45,7 @@ func (sqlStore *SQLStore) GetUpload(id string) (*model.Upload, error) {
 	return upload, nil
 }
 
+// GetUploads will fetch a list of uploads.
 func (sqlStore *SQLStore) GetUploads() ([]*model.Upload, error) {
 	uploads := &[]*model.Upload{}
 	err := sqlStore.selectBuilder(sqlStore.db, uploads, uploadSelect)

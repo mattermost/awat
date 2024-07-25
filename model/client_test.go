@@ -90,8 +90,9 @@ func TestTranslationClient(t *testing.T) {
 
 	t.Run("start a new translation", func(t *testing.T) {
 		gomock.InOrder(
+			store.EXPECT().GetUpload("foo").Return(nil, nil).Times(1),
 			store.EXPECT().CreateUpload(
-				gomock.Any(),
+				"foo",
 				model.SlackWorkspaceBackupType,
 			).Return(nil).Times(1),
 			store.EXPECT().
