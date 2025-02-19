@@ -10,9 +10,9 @@ jobs:
       image: golang:1.22-bookworm
     steps:
     - name: ci/checkout-repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.2.2
     - name: ci/cache-gopath
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: go-mod-v1-${{ hashFiles('go.sum') }}
         path: /go
@@ -26,11 +26,11 @@ jobs:
       image: golang:1.22-bookworm
     steps:
     - name: ci/checkout-repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.2.2
       with:
         fetch-depth: 0
     - name: ci/cache-gopath
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: go-mod-v1-${{ hashFiles('go.sum') }}
         path: /go
