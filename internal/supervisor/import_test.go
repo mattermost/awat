@@ -24,7 +24,8 @@ func TestGetPreImportPatch(t *testing.T) {
 			&cloud.Installation{
 				Size: importSize,
 				PriorityEnv: cloud.EnvVarMap{
-					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+					model.S3EnvKey:          cloud.EnvVar{Value: timeoutString},
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
 				},
 			},
 			nil,
@@ -35,7 +36,8 @@ func TestGetPreImportPatch(t *testing.T) {
 			&cloud.PatchInstallationRequest{
 				Size: &importSize,
 				PriorityEnv: cloud.EnvVarMap{
-					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+					model.S3EnvKey:          cloud.EnvVar{Value: timeoutString},
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
 				},
 			},
 		},
@@ -44,7 +46,8 @@ func TestGetPreImportPatch(t *testing.T) {
 			&cloud.Installation{
 				Size: model.SizeCloud10Users,
 				PriorityEnv: cloud.EnvVarMap{
-					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+					model.S3EnvKey:          cloud.EnvVar{Value: timeoutString},
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
 				},
 			},
 			&cloud.PatchInstallationRequest{
@@ -55,10 +58,27 @@ func TestGetPreImportPatch(t *testing.T) {
 			"only s3 timeout",
 			&cloud.Installation{
 				Size: importSize,
+				PriorityEnv: cloud.EnvVarMap{
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
+				},
 			},
 			&cloud.PatchInstallationRequest{
 				PriorityEnv: cloud.EnvVarMap{
 					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+				},
+			},
+		},
+		{
+			"only file extract disable",
+			&cloud.Installation{
+				Size: importSize,
+				PriorityEnv: cloud.EnvVarMap{
+					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+				},
+			},
+			&cloud.PatchInstallationRequest{
+				PriorityEnv: cloud.EnvVarMap{
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
 				},
 			},
 		},
@@ -93,7 +113,8 @@ func TestGetPostImportPatch(t *testing.T) {
 			&cloud.Installation{
 				Size: model.Size1000String,
 				PriorityEnv: cloud.EnvVarMap{
-					model.S3EnvKey: cloud.EnvVar{Value: timeoutString},
+					model.S3EnvKey:          cloud.EnvVar{Value: timeoutString},
+					model.ExtractContentKey: cloud.EnvVar{Value: model.ExtractContentDisabled},
 				},
 			},
 			&cloud.PatchInstallationRequest{

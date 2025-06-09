@@ -22,11 +22,12 @@ const (
 	ImportStateSucceeded                  = "import-succeeded"
 	ImportStateFailed                     = "import-failed"
 
-	SizeCloud10Users  = "cloud10users"
-	Size1000String    = "1000users"
-	S3ExtendedTimeout = 48 * 60 * 60 * 1000
-	S3DefaultTimeout  = 10 * 60 * 1000
-	S3EnvKey          = "MM_FILESETTINGS_AMAZONS3REQUESTTIMEOUTMILLISECONDS"
+	SizeCloud10Users       = "cloud10users"
+	Size1000String         = "1000users"
+	S3ExtendedTimeout      = 48 * 60 * 60 * 1000
+	S3EnvKey               = "MM_FILESETTINGS_AMAZONS3REQUESTTIMEOUTMILLISECONDS"
+	ExtractContentDisabled = "false"
+	ExtractContentKey      = "MM_FILESETTINGS_EXTRACTCONTENT"
 )
 
 // AllImportStatesPendingWork contains all import states that indicate pending work.
