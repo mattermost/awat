@@ -199,13 +199,17 @@ func (s *ImportSupervisor) transitionImportInstallationPreAdjustment(imp *model.
 		return model.ImportStateRequested
 	}
 
-	s3TimeoutEnv := installation.PriorityEnv[model.S3EnvKey]
-	if s3TimeoutEnv.Value != fmt.Sprintf("%d", model.S3ExtendedTimeout) {
+	if installation.PriorityEnv[model.S3EnvKey].Value != fmt.Sprintf("%d", model.S3ExtendedTimeout) {
 		logger.Debug("S3 timeout is not extended")
 		return model.ImportStateRequested
 	}
 
-	logger.Info("Installation is in the correct size and S3 timeout is extended")
+	if installation.PriorityEnv[model.ExtractContentKey].Value != model.ExtractContentDisabled {
+		logger.Debug("File content extraction is not disabled")
+		return model.ImportStateRequested
+	}
+
+	logger.Info("Installation has the correct import configuration")
 
 	return model.ImportStateInProgress
 }
@@ -342,20 +346,26 @@ func getPreImportPatch(installation *cloud.Installation, logger log.FieldLogger)
 		adjustmentRequired = true
 	}
 
-	// For the S3 timeout we need to look at both the priority and normal env
+	// For the env overrides we need to look at both the priority and normal env
 	// vars for the installation to see if either is set.
-	installationS3TimeoutEnvValue := installation.PriorityEnv[model.S3EnvKey].Value
-	if installationS3TimeoutEnvValue == "" {
-		installationS3TimeoutEnvValue = installation.MattermostEnv[model.S3EnvKey].Value
-	}
+	envPatches := cloud.EnvVarMap{}
 
+	installationS3TimeoutEnvValue := getInstallationEnvValue(installation, model.S3EnvKey)
 	importS3TimeoutString := fmt.Sprintf("%d", model.S3ExtendedTimeout)
 	if installationS3TimeoutEnvValue != importS3TimeoutString {
-		logger.Debugf("Extending S3 timeout to 48 hours")
-		patch.PriorityEnv = cloud.EnvVarMap{
-			model.S3EnvKey: cloud.EnvVar{Value: importS3TimeoutString},
-		}
+		logger.Debug("Extending S3 timeout to 48 hours")
+		envPatches[model.S3EnvKey] = cloud.EnvVar{Value: importS3TimeoutString}
 		adjustmentRequired = true
+	}
+	installationExtractContent := getInstallationEnvValue(installation, model.ExtractContentKey)
+	importExtractContent := model.ExtractContentDisabled
+	if installationExtractContent != importExtractContent {
+		logger.Debug("Disabling file content extraction")
+		envPatches[model.ExtractContentKey] = cloud.EnvVar{Value: importExtractContent}
+		adjustmentRequired = true
+	}
+	if len(envPatches) != 0 {
+		patch.PriorityEnv = envPatches
 	}
 
 	if !adjustmentRequired {
@@ -363,6 +373,15 @@ func getPreImportPatch(installation *cloud.Installation, logger log.FieldLogger)
 	}
 
 	return patch
+}
+
+func getInstallationEnvValue(installation *cloud.Installation, key string) string {
+	priorityValue := installation.PriorityEnv[key].Value
+	if priorityValue != "" {
+		return priorityValue
+	}
+
+	return installation.MattermostEnv[key].Value
 }
 
 func getPostImportPatch(installation *cloud.Installation, logger log.FieldLogger) *cloud.PatchInstallationRequest {
@@ -376,7 +395,8 @@ func getPostImportPatch(installation *cloud.Installation, logger log.FieldLogger
 		adjustmentRequired = true
 	}
 
-	if installation.PriorityEnv[model.S3EnvKey].Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) {
+	if installation.PriorityEnv[model.S3EnvKey].Value == fmt.Sprintf("%d", model.S3ExtendedTimeout) ||
+		installation.PriorityEnv[model.ExtractContentKey].Value == model.ExtractContentDisabled {
 		// NOTE: We want to clear the priority env var instead of setting it to
 		// a default value so that standard group environment variables are not
 		// ignored on the installation. Clearing the priority env vars will
@@ -385,7 +405,7 @@ func getPostImportPatch(installation *cloud.Installation, logger log.FieldLogger
 		// to be re-applied as a follow-up step, we will assume that clearing
 		// everything is okay. Installations receiving imports should always be
 		// newly-created so it's unlikely they should have overrides.
-		logger.Debug("Clearing all priority env to remove S3 timeout increase")
+		logger.Debug("Clearing all priority env to remove import overrides")
 		patch.PriorityEnv = cloud.EnvVarMap{}
 		adjustmentRequired = true
 	}
