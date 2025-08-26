@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: ci/checkout-repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.2.2
     - name: ci/prepare-docker-environment
       uses: ./.github/actions/docker-prepare
     - name: ci/push-image-pr
