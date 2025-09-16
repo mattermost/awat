@@ -24,14 +24,17 @@ import (
 )
 
 const (
-	databaseFlag         = "database"
-	listenFlag           = "listen"
-	bucketFlag           = "bucket"
-	workingDirectoryFlag = "workdir"
-	serverFlag           = "server"
-	provisionerFlag      = "provisioner"
-	debugFlag            = "debug"
-	keepImportDataFlag   = "keep-import-data"
+	databaseFlag          = "database"
+	listenFlag            = "listen"
+	bucketFlag            = "bucket"
+	workingDirectoryFlag  = "workdir"
+	serverFlag            = "server"
+	provisionerFlag       = "provisioner"
+	debugFlag             = "debug"
+	keepImportDataFlag    = "keep-import-data"
+	authClientIDFlag      = "auth-client-id"
+	authClientSecretFlag  = "auth-client-secret"
+	authTokenEndpointFlag = "auth-token-endpoint"
 )
 
 func init() {
@@ -40,6 +43,9 @@ func init() {
 	serverCmd.PersistentFlags().String(workingDirectoryFlag, "/tmp/awat/workdir", "The directory to which attachments can be fetched and where the input can be extracted. In production, this will contain the location where the EBS volume is mounted.")
 	serverCmd.PersistentFlags().String(databaseFlag, "postgres://localhost:5435", "Location of a Postgres database for the server to use")
 	serverCmd.PersistentFlags().String(provisionerFlag, "http://localhost:8075", "Address of the Provisioner")
+	serverCmd.PersistentFlags().String(authClientIDFlag, "", "Client ID for provisioner authentication")
+	serverCmd.PersistentFlags().String(authClientSecretFlag, "", "Client secret for provisioner authentication")
+	serverCmd.PersistentFlags().String(authTokenEndpointFlag, "", "Auth endpoint for provisioner authentication")
 	serverCmd.PersistentFlags().Bool(keepImportDataFlag, true, "Whether to preserve import bundles after import completion or not")
 	serverCmd.PersistentFlags().Bool(debugFlag, true, "Whether to output debug logs")
 	_ = serverCmd.MarkPersistentFlagRequired(bucketFlag)
@@ -104,9 +110,19 @@ var serverCmd = &cobra.Command{
 			debugFlag:            debug,
 		}).Info("Starting AWAT Server")
 
-		cloud, err := buildCloudClientAndCheckConnectivity(provisionerURL)
+		cloudAuth := CloudAuth{}
+		cloudAuth.ClientID, _ = command.Flags().GetString(authClientIDFlag)
+		cloudAuth.ClientSecret, _ = command.Flags().GetString(authClientSecretFlag)
+		cloudAuth.TokenEndpoint, _ = command.Flags().GetString(authTokenEndpointFlag)
+
+		cloudClient := cmodel.NewClient(provisionerURL)
+		if cloudAuth.Valid() {
+			logger.Info("Using cloud client with OAuth authentication")
+			cloudClient = cmodel.NewClientWithOAuth(provisionerURL, nil, cloudAuth.ClientID, cloudAuth.ClientSecret, cloudAuth.TokenEndpoint)
+		}
+		_, err = cloudClient.GetInstallationsCount(false)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to check provisioner connectivity")
 		}
 
 		awsContext, err := api.NewAWSContext(bucket)
@@ -117,7 +133,7 @@ var serverCmd = &cobra.Command{
 		translationSupervisor := supervisor.NewTranslationSupervisor(sqlStore, logger, bucket, workdir)
 		translationSupervisor.Start()
 
-		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloud, bucket, keepImportData)
+		importSupervisor := supervisor.NewImportSupervisor(sqlStore, logger, cloudClient, bucket, keepImportData)
 		go importSupervisor.Start()
 
 		router := mux.NewRouter()
@@ -159,14 +175,4 @@ var serverCmd = &cobra.Command{
 		defer cancel()
 		return srv.Shutdown(ctx)
 	},
-}
-
-func buildCloudClientAndCheckConnectivity(provisionerURL string) (*cmodel.Client, error) {
-	cloudClient := cmodel.NewClient(provisionerURL)
-	_, err := cloudClient.GetInstallationsCount(false)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to check provisioner connectivity")
-	}
-
-	return cloudClient, nil
 }
