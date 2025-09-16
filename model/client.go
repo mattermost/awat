@@ -396,7 +396,7 @@ func (c *Client) UploadArchiveForTranslation(filename string, archiveType Backup
 }
 
 func (c *Client) checkIfUploadComplete(uploadID string) (bool, error) {
-	resp, err := http.Get(c.buildURL(fmt.Sprintf("/upload/%s", uploadID)))
+	resp, err := http.Get(c.buildURL("/upload/%s", uploadID))
 	if err != nil {
 		return false, err
 	}
